@@ -92,7 +92,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sys);outline-of
 .panel{position:relative;flex:1;min-height:0;margin-top:calc(-1 * var(--seam));background:transparent;display:flex;flex-direction:column;transition:opacity .3s;z-index:3}
 .panel::before{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(12,15,20,0),rgba(12,15,20,.85) 55%,var(--panel) 100%) top/100% var(--seam) no-repeat,linear-gradient(var(--panel),var(--panel)) 0 var(--seam)/100% calc(100% - var(--seam)) no-repeat;pointer-events:none}
 .stage.peek .panel{opacity:0;pointer-events:none;position:absolute;inset:0}
-.feed{position:relative;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:calc(var(--seam) + 8px) 20px var(--feedpad);mask-image:linear-gradient(to bottom,transparent 10px,#000 calc(var(--seam) + 6px));-webkit-mask-image:linear-gradient(to bottom,transparent 10px,#000 calc(var(--seam) + 6px));display:flex;flex-direction:column;gap:16px;overscroll-behavior:contain}
+.feed{position:relative;flex:1;min-height:0;margin-top:var(--seam);overflow-y:auto;scrollbar-width:none;padding:10px 20px var(--feedpad);mask-image:linear-gradient(to bottom,transparent,#000 16px);-webkit-mask-image:linear-gradient(to bottom,transparent,#000 16px);   /* text stays below the gradient seam */display:flex;flex-direction:column;gap:16px;overscroll-behavior:contain}
 .feed::-webkit-scrollbar{display:none}
 .feed .spacer{flex:1 0 0;min-height:0}
 .ln{transition:opacity .4s}
