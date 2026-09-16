@@ -162,8 +162,12 @@ const player = {
 
 /* ---- layout ---- */
 function layout(){
-  const h = el.stage.classList.contains('hasStill') ? el.stage.clientWidth * 9 / 16 : el.stage.clientHeight * 0.46;
+  const seam = 72;
+  const h = el.stage.classList.contains('hasStill') ? el.stage.clientWidth * 9 / 16 + seam : el.stage.clientHeight * 0.46 + seam * 0.6;
   el.visual.style.height = Math.round(h) + 'px';
+  // newest line rests a little above the middle of the text panel
+  const panelH = el.stage.clientHeight - h + seam - 22;
+  el.stage.style.setProperty('--feedpad', Math.round(panelH * 0.5) + 'px');
 }
 addEventListener('resize', layout);
 
@@ -315,7 +319,7 @@ function finished(){
 }
 function resetView(){
   player.stopTyping(); player.i = -1; player.chosen = null; player.branch = null; player.done = false; player.waiting = false; player.current = null;
-  el.feed.innerHTML = ''; setStill(null); setChars(null, 'all'); setBg(null); setBgm(null); el.cur.classList.remove('on');
+  el.feed.innerHTML = '<div class="spacer"></div>'; setStill(null); setChars(null, 'all'); setBg(null); setBgm(null); el.cur.classList.remove('on');
   el.rail.querySelectorAll('.mark').forEach(m => m.remove()); seek();
 }
 function restart(){ resetView(); player.instant = true; next(); player.instant = false; }

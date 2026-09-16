@@ -1,4 +1,5 @@
 :root{
+  --seam:72px; --feedpad:200px;
   --ground:#0f1114; --stage:#07090c; --panel:#0c0f14; --card:#141821; --winline:rgba(255,255,255,.10);
   --ink:#ece8df; --ink2:#b9b4aa; --mute:#6f737b; --name:#e3a44a; --sys:#6cbad0; --danger:#d9655a;
   --btn:rgba(255,255,255,.08); --btn-on:rgba(108,186,208,.22);
@@ -57,26 +58,26 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sys);outline-of
 .layer{position:absolute;inset:0}
 .bg img{position:absolute;inset:0;width:100%;height:100%;max-width:none;object-fit:cover;object-position:center 30%;opacity:0;transition:opacity .7s ease;transform:scale(1.04)}
 .bg img.on{opacity:1}
-.sp{position:absolute;bottom:-14%;height:108%;width:auto;max-width:none;left:50%;transform:translateX(-50%);opacity:0;
+.sp{position:absolute;bottom:-78%;height:170%;width:auto;max-width:none;left:50%;transform:translateX(-50%);opacity:0;
   transition:opacity .35s ease,filter .35s ease,transform .35s ease,left .35s ease;filter:drop-shadow(0 14px 22px rgba(0,0,0,.5));pointer-events:none}
 .sp.on{opacity:1}
 .sp.dim{filter:brightness(.5) drop-shadow(0 14px 22px rgba(0,0,0,.5));transform:translateX(-50%) scale(.94)}
-.sp.pl{left:27%}.sp.pm{left:50%}.sp.pr{left:73%}
-.sp.pl.three{left:20%}.sp.pr.three{left:80%}
+.sp.pl{left:26%}.sp.pm{left:50%}.sp.pr{left:74%}
+.sp.pl.three{left:18%}.sp.pr.three{left:82%}
 .still{opacity:0;transition:opacity .6s ease;pointer-events:none;background:#000}
 .still.on{opacity:1}
 .still img{position:absolute;inset:0;width:100%;height:100%;max-width:none;object-fit:cover}
 .stage.peek .still img{object-fit:contain}
-.vig{background:linear-gradient(to bottom,rgba(0,0,0,.55),transparent 30%,transparent 78%,rgba(7,9,12,.9));pointer-events:none}
+.vig{background:linear-gradient(to bottom,rgba(0,0,0,.55),transparent 30%);pointer-events:none}
 .stage.peek .vig{background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent 20%)}
 
-.peekBtn{position:absolute;right:12px;bottom:12px;z-index:6;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+.peekBtn{position:absolute;right:12px;bottom:calc(var(--seam) + 10px);z-index:6;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
   color:var(--ink);background:rgba(7,9,12,.55);border:1px solid var(--winline);backdrop-filter:blur(6px);transition:background .15s,transform .15s}
 .peekBtn:hover{background:rgba(7,9,12,.8);transform:scale(1.06)}
 .peekBtn .ic-collapse{display:none}
 .stage.peek .peekBtn .ic-expand{display:none}
 .stage.peek .peekBtn .ic-collapse{display:block}
-.stage.peek .peekBtn{bottom:calc(12px + 22px + env(safe-area-inset-bottom))}
+.stage.peek .peekBtn{bottom:calc(12px + 22px + env(safe-area-inset-bottom))!important}
 
 .top{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:8px;padding:calc(12px + env(safe-area-inset-top)) 14px 0;z-index:5;font-size:11px}
 .top .code{font-family:var(--mono);color:var(--ink2);letter-spacing:.04em;text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38%}
@@ -85,10 +86,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sys);outline-of
 .top .b{font-family:var(--ui);font-weight:700;letter-spacing:.1em;font-size:10.5px;color:var(--ink2);background:rgba(7,9,12,.62);border-radius:6px;padding:5px 8px;border:1px solid var(--winline);white-space:nowrap}
 .top .b.on{color:var(--sys);background:var(--btn-on);border-color:rgba(108,186,208,.4)}
 
-.panel{position:relative;flex:1;min-height:0;background:var(--panel);display:flex;flex-direction:column;transition:opacity .3s}
+.panel{position:relative;flex:1;min-height:0;margin-top:calc(-1 * var(--seam));background:transparent;display:flex;flex-direction:column;transition:opacity .3s;z-index:3}
+.panel::before{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(12,15,20,0),rgba(12,15,20,.85) 55%,var(--panel) 100%) top/100% var(--seam) no-repeat,linear-gradient(var(--panel),var(--panel)) 0 var(--seam)/100% calc(100% - var(--seam)) no-repeat;pointer-events:none}
 .stage.peek .panel{opacity:0;pointer-events:none;position:absolute;inset:0}
-.feed{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:18px 20px 30px;display:flex;flex-direction:column;gap:16px;overscroll-behavior:contain}
+.feed{position:relative;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:calc(var(--seam) + 8px) 20px var(--feedpad);mask-image:linear-gradient(to bottom,transparent 10px,#000 calc(var(--seam) + 6px));-webkit-mask-image:linear-gradient(to bottom,transparent 10px,#000 calc(var(--seam) + 6px));display:flex;flex-direction:column;gap:16px;overscroll-behavior:contain}
 .feed::-webkit-scrollbar{display:none}
+.feed .spacer{flex:1 0 0;min-height:0}
 .ln{transition:opacity .4s}
 .ln .spk{font-weight:700;font-size:11px;letter-spacing:.14em;color:var(--name);margin-bottom:5px}
 .ln .t{font-family:var(--serif);font-size:var(--fs);line-height:1.9;color:var(--ink);text-align:justify;white-space:pre-wrap}
@@ -107,10 +110,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sys);outline-of
 .ln.end button{font-weight:700;letter-spacing:.12em;font-size:12px;padding:9px 18px;border-radius:8px;border:1px solid var(--winline);color:var(--ink2)}
 .ln.end button.primary{color:var(--stage);background:var(--name);border-color:var(--name)}
 .ln.err .t{color:var(--danger);font-family:var(--ui);font-size:13px}
-.cur{position:absolute;right:16px;bottom:12px;font-size:10px;color:var(--name);opacity:0;animation:blink 1.1s infinite;z-index:2}
+.cur{position:absolute;right:16px;bottom:calc(var(--feedpad) - 22px);font-size:10px;color:var(--name);opacity:0;animation:blink 1.1s infinite;z-index:2}
 .cur.on{opacity:1}
 @keyframes blink{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
-.loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--mute);font-size:12px;letter-spacing:.2em;background:var(--panel)}
+.loading{position:absolute;inset:var(--seam) 0 0 0;z-index:2;display:grid;place-items:center;color:var(--mute);font-size:12px;letter-spacing:.2em;background:var(--panel)}
 .loading span{display:block;width:26px;height:26px;border-radius:50%;border:2px solid var(--winline);border-top-color:var(--name);animation:spin 1s linear infinite;margin:0 auto 12px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
