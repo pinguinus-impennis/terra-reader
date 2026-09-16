@@ -75,15 +75,17 @@ def analyze(casc, file):
     ub = max(1, int(top + fig * 0.45))
     crop = cv2.resize(gray[0:ub, :], None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     cands += [(x // 2, y // 2, w // 2, h // 2) for (x, y, w, h) in detect(casc, cv2.equalizeHist(crop))]
+    full_body = fig >= 0.8 * ch                # standing figure filling the canvas (vs. bust / close-up)
     def plausible(f):
         x, y, w, h = f; cy = y + h / 2
         heads = (bot - cy) / h                 # eye line -> feet, in face heights
-        return (cy < top + fig * 0.40) and (3.0 <= heads <= 11.0) and (cy - top <= 3.0 * h)
+        lo = 4.3 if full_body else 2.5         # a full-body figure is never shorter than ~4.3 faces
+        return (cy < top + fig * 0.40) and (lo <= heads <= 11.0) and (cy - top <= 3.0 * h)
     good = [f for f in cands if plausible(f)]
     r = lambda v: round(v, 4)
     if good:
         hmax = max(f[3] for f in good)
-        big = [f for f in good if f[3] >= 0.6 * hmax]
+        big = [f for f in good if f[3] >= 0.4 * hmax]
         x, y, w, h = min(big, key=lambda f: f[1])        # the topmost of the reasonably-sized candidates
         return [r((x + w / 2) / cw), r((y + h / 2) / ch), r(h / ch), r(top / ch), r(bot / ch), 0]
     # estimate: assume an average adult (~7.2 face heights tall, face centred ~0.75 face below the top)
