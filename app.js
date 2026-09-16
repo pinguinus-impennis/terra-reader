@@ -17,7 +17,7 @@ const store = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
   del(k){ try{ localStorage.removeItem(k); }catch(e){} },
 };
-const settings = Object.assign({ doc: 'ドクター', font: 16, proxy: true, sys: false }, store.get('tr:settings', {}));
+const settings = Object.assign({ doc: 'ドクター', font: 16, proxy: true, sys: false, faces: true }, store.get('tr:settings', {}));
 function saveSettings(){ store.set('tr:settings', settings); applySettings(); }
 function applySettings(){ document.documentElement.style.setProperty('--fs', settings.font + 'px'); }
 const progress = {
@@ -235,7 +235,7 @@ function placeSprites(){
     const isSide = n === 3 && k !== front;
     const dim = isSide || focus === 'none' || (n > 1 && focus && focus !== 'all' && focus !== 'keep' && focus !== k);
     img.classList.toggle('dim', dim); img.classList.toggle('front', n === 3 && k === front);
-    const f = img.dataset.path ? FACES[setKey(img.dataset.path)] : null;
+    const f = (settings.faces && img.dataset.path) ? FACES[setKey(img.dataset.path)] : null;
     if(!f || f[0] == null || !img.naturalHeight){ img.classList.remove('fx'); img.style.cssText = ''; return; }
     const FACE = u * (n === 1 ? 88 : n === 2 ? 72 : (isSide ? 52 : 64));
     const eye = VH * (isSide ? .40 : .36);
@@ -383,7 +383,7 @@ function setPeek(on){ el.stage.classList.toggle('peek', on); el.btnPeek.title = 
 /* ---- open a story ---- */
 async function openStory(id){
   let jump = null;                                   // #/r/<id>?i=<step>  (debug / sharing a position)
-  const q = id.indexOf('?'); if(q >= 0){ const m = /[?&]i=(\d+)/.exec(id.slice(q)); if(m) jump = Number(m[1]); id = id.slice(0, q); }
+  const q = id.indexOf('?'); if(q >= 0){ const qs = id.slice(q); const m = /[?&]i=(\d+)/.exec(qs); if(m) jump = Number(m[1]); if(/[?&]faces=0/.test(qs)) settings.faces = false; if(/[?&]faces=1/.test(qs)) settings.faces = true; id = id.slice(0, q); }
   const ep = findEp(id);
   if(!ep){ location.hash = ''; return; }
   const token = ++player.token;
@@ -435,13 +435,13 @@ document.addEventListener('keydown', e => {
    SETTINGS SHEET
    ===================================================================== */
 function openSettings(){
-  $('setDoc').value = settings.doc; $('setProxy').checked = !!settings.proxy; $('setSys').checked = !!settings.sys;
+  $('setDoc').value = settings.doc; $('setProxy').checked = !!settings.proxy; $('setSys').checked = !!settings.sys; $('setFaces').checked = !!settings.faces;
   document.querySelectorAll('#setFont button').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === Number(settings.font)));
   $('settings').hidden = false;
 }
 function closeSettings(){
-  settings.doc = $('setDoc').value.trim() || 'ドクター'; settings.proxy = $('setProxy').checked; settings.sys = $('setSys').checked;
-  saveSettings(); $('settings').hidden = true; if(!$('toc').hidden) renderToc();
+  settings.doc = $('setDoc').value.trim() || 'ドクター'; settings.proxy = $('setProxy').checked; settings.sys = $('setSys').checked; settings.faces = $('setFaces').checked;
+  saveSettings(); $('settings').hidden = true; if(!$('toc').hidden) renderToc(); placeSprites();
 }
 $('btnSettings').addEventListener('click', openSettings);
 $('btnCloseSettings').addEventListener('click', closeSettings);
