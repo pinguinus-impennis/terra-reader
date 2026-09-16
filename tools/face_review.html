@@ -25,7 +25,7 @@ header button.primary{background:var(--det);color:#14161a;font-weight:700;border
 .card .btns button{flex:1;font:inherit;font-size:11px;color:var(--ink2);background:#262b33;border:1px solid var(--line);border-radius:6px;padding:5px 0;cursor:pointer}
 .card .btns button.on{background:var(--ok);color:#14161a;font-weight:700}
 .tag{position:absolute;left:6px;top:6px;font-size:10px;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.6)}
-.tag.det{color:var(--det)}.tag.est{color:var(--est)}.tag.man{color:var(--man)}
+.tag.det{color:var(--det)}.tag.est{color:var(--est)}.tag.man{color:var(--man)}.tag.prop{color:#d9a4e8}
 .zoom{position:absolute;right:6px;top:6px;width:64px;height:64px;border-radius:6px;border:1px solid var(--line);background:#000;overflow:hidden;pointer-events:none}
 .zoom canvas{width:100%;height:100%}
 </style>
@@ -46,7 +46,7 @@ header button.primary{background:var(--det);color:#14161a;font-weight:700;border
   <button id="clear">手直しを全部消す</button>
   <div class="help">
     出番の多い体から順に並んでいます。枠が顔に合っていれば何もしなくて OK（「OK」を押すと確認済みの印だけ付きます）。
-    ずれていたら <b>画像の顔の中心をクリック</b>して枠を移動、<b>マウスホイール</b>で枠の大きさを変更。オレンジ＝自動検出、水色＝推定、緑＝手直し。右上の小窓は枠の中身の拡大。
+    ずれていたら <b>画像の顔の中心をクリック</b>して枠を移動、<b>マウスホイール</b>で枠の大きさを変更。オレンジ＝自動検出、水色＝推定、紫＝同じ人物の別衣装から転写、緑＝手直し。右上の小窓は枠の中身の拡大。
     終わったら「書き出し」で JSON を保存し、<code>python tools/apply_overrides.py ダウンロードしたファイル</code> で反映します。手直しはブラウザにも保存されるので途中で閉じても残ります。
   </div>
 </header>
@@ -61,10 +61,10 @@ const PAGE = 60;
 fetch('../../_cache/review_index.json').then(r => r.json()).then(d => { ITEMS = d; render(true); });
 
 function current(it){ return overrides[it.k] || it.f; }
-function flagOf(it){ return overrides[it.k] ? 'man' : (it.f[5] === 0 ? 'det' : 'est'); }
+function flagOf(it){ return overrides[it.k] ? 'man' : (it.f[5] === 0 ? 'det' : it.f[5] === 3 ? 'prop' : 'est'); }
 function filtered(){
   const f = $('#filter').value;
-  return ITEMS.filter(it => f === 'all' || (f === 'est' && it.f[5] === 1 && !overrides[it.k]) || (f === 'det' && it.f[5] === 0 && !overrides[it.k]) || (f === 'undone' && !done[it.k] && !overrides[it.k]) || (f === 'man' && overrides[it.k]));
+  return ITEMS.filter(it => f === 'all' || (f === 'est' && it.f[5] !== 0 && !overrides[it.k]) || (f === 'det' && it.f[5] === 0 && !overrides[it.k]) || (f === 'undone' && !done[it.k] && !overrides[it.k]) || (f === 'man' && overrides[it.k]));
 }
 function stat(){
   const n = ITEMS.length, m = Object.keys(overrides).length, d = Object.keys(done).length;
@@ -88,10 +88,10 @@ function card(it){
     const f = current(it), W = img.naturalWidth, H = img.naturalHeight; if(!W) return;
     cv.width = W; cv.height = H; const g = cv.getContext('2d'); g.clearRect(0, 0, W, H); g.drawImage(img, 0, 0);
     const cx = f[0] * W, cy = f[1] * H, fh = f[2] * H;
-    g.lineWidth = Math.max(2, W / 150); g.strokeStyle = { det: '#e3a44a', est: '#6cbad0', man: '#7ee081' }[flagOf(it)];
+    g.lineWidth = Math.max(2, W / 150); g.strokeStyle = { det: '#e3a44a', est: '#6cbad0', man: '#7ee081', prop: '#d9a4e8' }[flagOf(it)];
     g.strokeRect(cx - fh / 2, cy - fh / 2, fh, fh);
     g.beginPath(); g.moveTo(cx - fh * 0.15, cy); g.lineTo(cx + fh * 0.15, cy); g.moveTo(cx, cy - fh * 0.15); g.lineTo(cx, cy + fh * 0.15); g.stroke();
-    el.querySelector('.tag').textContent = { det: '検出', est: '推定', man: '手直し' }[flagOf(it)]; el.querySelector('.tag').className = 'tag ' + flagOf(it);
+    el.querySelector('.tag').textContent = { det: '検出', est: '推定', man: '手直し', prop: '別衣装から転写' }[flagOf(it)]; el.querySelector('.tag').className = 'tag ' + flagOf(it);
     zc.width = 128; zc.height = 128; const zg = zc.getContext('2d'); zg.clearRect(0, 0, 128, 128);
     const s = fh * 1.6; zg.drawImage(img, cx - s / 2, cy - s / 2, s, s, 0, 0, 128, 128);
   };

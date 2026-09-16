@@ -2,12 +2,12 @@
 the face box and figure extent as fractions of the canvas.
 
   faces.json = { setkey: [cx, cy, face_h, fig_top, fig_bot, flag] }   (all 0..1 of canvas)
-  flag 0 = face detected, 1 = estimated from the figure outline (no face found)
+  flag 0 = face detected, 1 = estimated from the figure outline (no face found), 2 = manual, 3 = copied from a sibling body
 
 Usage:  python tools/analyze_faces.py            (needs: opencv-python-headless<5, pillow, numpy)
 Downloads one representative image per set (resized by wsrv.nl) into a cache dir.
 """
-import json, os, re, sys, io, time, urllib.request, urllib.parse, concurrent.futures
+import json, os, re, sys, io, time, glob, urllib.request, urllib.parse, concurrent.futures
 import numpy as np
 from PIL import Image
 import cv2
@@ -94,6 +94,45 @@ def analyze(casc, file):
     cx = (cols[0] + cols[-1]) / 2 if len(cols) else cw / 2
     return [r(cx / cw), r(cy / ch), r(h / ch), r(top / ch), r(bot / ch), 1]
 
+def _gray(file):
+    im = Image.open(file).convert('RGBA'); a = np.array(im); bg = np.full(a.shape[:2] + (3,), 128, np.uint8); al = a[:, :, 3:4] / 255.0
+    return cv2.cvtColor((a[:, :, :3] * al + bg * (1 - al)).astype(np.uint8), cv2.COLOR_RGB2GRAY)
+
+def propagate_siblings(faces, casc):
+    """Bodies X$1, X$2 … are the same figure with different props. Where one variant has a detected
+    face and another only an estimate, find the detected face patch inside the other by template
+    matching and copy the box over (flag 3 = propagated)."""
+    import collections
+    groups = collections.defaultdict(list)
+    for k in faces:
+        if '$' in k: groups[re.sub(r'\$\d+$', '', k)].append(k)
+    cache = {os.path.basename(f)[:-4].replace('__', '/'): f for f in glob.glob(os.path.join(CACHE, '*.png'))}
+    def rep_for(k):
+        for p, f in cache.items():
+            if p == k or (p.rpartition('/')[0] == k.rpartition('/')[0] and re.sub(r'#\d+', '', p.rpartition('/')[2]) == k.rpartition('/')[2]): return f
+    n = 0
+    for base, ks in groups.items():
+        srcs = [k for k in ks if faces[k][5] == 0]; dsts = [k for k in ks if faces[k][5] == 1]
+        if not srcs or not dsts: continue
+        for dk in dsts:
+            fd_file = rep_for(dk)
+            if not fd_file: continue
+            gd = _gray(fd_file)
+            for sk in srcs:
+                fs_file = rep_for(sk)
+                if not fs_file: continue
+                gs = _gray(fs_file)
+                if gs.shape != gd.shape: continue
+                f = faces[sk]; H, W = gs.shape; cx, cy, fh = f[0] * W, f[1] * H, f[2] * H; s = int(fh * 1.3)
+                x0, y0 = int(max(0, cx - s / 2)), int(max(0, cy - s / 2)); tpl = gs[y0:y0 + s, x0:x0 + s]
+                if tpl.size == 0: continue
+                res = cv2.matchTemplate(gd, tpl, cv2.TM_CCOEFF_NORMED); _, mx, _, loc = cv2.minMaxLoc(res)
+                if mx < 0.6: continue
+                fd = faces[dk]
+                faces[dk] = [round((loc[0] + cx - x0) / W, 4), round((loc[1] + cy - y0) / H, 4), f[2], fd[3], fd[4], 3]; n += 1
+                break
+    if n: print(f'propagated faces to {n} sibling bodies')
+
 def main():
     os.makedirs(CACHE, exist_ok=True)
     sprites = json.load(open(os.path.join(DATA, 'sprites.json'), encoding='utf-8'))
@@ -127,6 +166,7 @@ def main():
             if setkey(path) in remap: sprites[name] = remap[setkey(path)]; changed += 1
         json.dump(sprites, open(os.path.join(DATA, 'sprites.json'), 'w', encoding='utf-8'), separators=(',', ':'))
         print(f'face-patch sets remapped to body: {len(remap)} sets, {changed} sprite names')
+    propagate_siblings(faces, casc)
     keep = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'faces_overrides.json')   # hand corrections always win
     if os.path.exists(keep):
         for k, v in json.load(open(keep, encoding='utf-8')).items(): v = list(v); v[5] = 2; faces[k] = v
