@@ -80,7 +80,7 @@ def analyze(casc, file):
         x, y, w, h = f; cy = y + h / 2
         heads = (bot - cy) / h                 # eye line -> feet, in face heights
         lo = 4.3 if full_body else 2.5         # a full-body figure is never shorter than ~4.3 faces
-        return (cy < top + fig * 0.40) and (lo <= heads <= 11.0) and (cy - top <= 3.0 * h)
+        return (cy < top + fig * 0.30) and (lo <= heads <= 14.5) and (cy - top <= 2.6 * h)   # face sits near the top; hats/horns add at most ~1.5 faces
     good = [f for f in cands if plausible(f)]
     r = lambda v: round(v, 4)
     if good:

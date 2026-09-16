@@ -171,7 +171,7 @@ const player = {
 /* ---- layout ---- */
 function layout(){
   const seam = 72;
-  const h = el.stage.classList.contains('hasStill') ? el.stage.clientWidth * 9 / 16 + seam : el.stage.clientHeight * 0.46 + seam * 0.6;
+  const h = el.stage.classList.contains('hasStill') ? el.stage.clientWidth * 9 / 16 + seam : el.stage.clientHeight * 0.50 + seam * 0.6;
   el.visual.style.height = Math.round(h) + 'px';
   // newest line rests a little above the middle of the text panel
   const panelH = el.stage.clientHeight - h + seam - 22;
@@ -208,8 +208,9 @@ function setChars(chars, focus){
     if(!name){ img.classList.remove('on'); img.style.cssText = ''; continue; }
     img.className = 'sp on p' + pos(k) + (three ? ' three' : '');
     if(img.dataset.name !== name){
-      img.dataset.name = name; img.dataset.path = ''; img.style.cssText = ''; img.classList.remove('fx');
       const paths = spriteCandidates(name);
+      const sameBody = img.dataset.path && setKey(img.dataset.path) === setKey(paths[0]);
+      img.dataset.name = name; if(!sameBody){ img.dataset.path = ''; img.style.cssText = ''; img.classList.remove('fx'); }
       const list = paths.flatMap(p => urlsFor('sprite', p).map(u => ({ u, p })));
       loadInto(img, list.map(x => x.u)).then(idx => {
         if(img.dataset.name !== name) return;
@@ -228,7 +229,7 @@ function placeSprites(){
   const W = el.stage.clientWidth, VH = el.visual.clientHeight, u = W / 400;
   const loaded = shown.filter(k => el['sp' + k.toUpperCase()].classList.contains('on'));
   const front = n === 3 ? ((focus && loaded.includes(focus)) ? focus : (loaded.includes('m') ? 'm' : (loaded[0] || 'm'))) : null;
-  const xs = n === 1 ? [.5] : n === 2 ? [.28, .72] : [.17, .5, .83];
+  const xs = n === 1 ? [.5] : n === 2 ? [.23, .77] : [.15, .5, .85];
   shown.forEach((k, i) => {
     const img = el['sp' + k.toUpperCase()];
     const isSide = n === 3 && k !== front;
@@ -236,7 +237,7 @@ function placeSprites(){
     img.classList.toggle('dim', dim); img.classList.toggle('front', n === 3 && k === front);
     const f = img.dataset.path ? FACES[setKey(img.dataset.path)] : null;
     if(!f || f[0] == null || !img.naturalHeight){ img.classList.remove('fx'); img.style.cssText = ''; return; }
-    const FACE = u * (n === 1 ? 95 : n === 2 ? 80 : (isSide ? 58 : 72));
+    const FACE = u * (n === 1 ? 88 : n === 2 ? 72 : (isSide ? 52 : 64));
     const eye = VH * (isSide ? .40 : .36);
     const heads = (f[4] - f[1]) / f[2];
     const off = Math.max(-0.7 * FACE, Math.min(0.7 * FACE, 0.45 * (heads - 7.4) * FACE));
