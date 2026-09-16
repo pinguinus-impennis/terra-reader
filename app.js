@@ -76,7 +76,7 @@ function loadInto(img, urls){
 function setKey(path){
   path = path.replace(/^characters\//, '').replace(/\.png$/i, '');
   const i = path.lastIndexOf('/'); const d = i >= 0 ? path.slice(0, i) : ''; let f = i >= 0 ? path.slice(i + 1) : path;
-  if(f.includes('#')) f = f.replace(/#\d+/, ''); else if(d) f = d;
+  if(f.includes('#')) f = f.replace(/#\d+/, ''); else if(f.includes('$')) { /* body file */ } else if(d) f = d;
   return d ? d + '/' + f : f;
 }
 const preloadCache = new Map();

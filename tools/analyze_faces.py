@@ -21,9 +21,14 @@ H = 640
 
 def setkey(path):
     d, _, f = path.rpartition('/')
-    if '#' in f: f = re.sub(r'#\d+', '', f)
-    elif d: f = d
+    if '#' in f: f = re.sub(r'#\d+', '', f)      # expressions of one body
+    elif '$' in f: pass                          # a body file itself
+    elif d: f = d                                # legacy: whole folder is one body
     return (d + '/' + f) if d else f
+
+def is_face_patch(file):
+    """Newest sprites store the body as X$m.png and expressions as small X#n$m.png patches."""
+    with Image.open(file) as im: return im.height <= 520
 
 def url_for(path):
     return 'https://wsrv.nl/?url=' + urllib.parse.quote(RAW + path + '.png', safe='') + f'&h={H}&output=png'
@@ -101,8 +106,12 @@ def main():
     print('to analyze', len(todo))
     casc = cv2.CascadeClassifier(CASCADE)
     done = 0; ok = 0
+    remap = {}   # face-patch sets -> body path
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as ex:
         for (k, p), file in zip(todo, ex.map(lambda kp: fetch(kp[1]), todo)):
+            if file and '#' in p and is_face_patch(file):
+                body = re.sub(r'#\d+', '', p)          # avg_x_1/avg_x_1#3$1 -> avg_x_1/avg_x_1$1
+                remap[k] = body; file = fetch(body); k = setkey(body)
             if file:
                 res = analyze(casc, file)
                 if res: faces[k] = res; ok += res[5] == 0
@@ -110,6 +119,12 @@ def main():
             if done % 100 == 0:
                 json.dump(faces, open(faces_path, 'w'), separators=(',', ':'))
                 print(f'  {done}/{len(todo)} analyzed, faces found {ok}', flush=True)
+    if remap:   # point every expression of a face-patch set at its body (the body carries a default face)
+        changed = 0
+        for name, path in list(sprites.items()):
+            if setkey(path) in remap: sprites[name] = remap[setkey(path)]; changed += 1
+        json.dump(sprites, open(os.path.join(DATA, 'sprites.json'), 'w', encoding='utf-8'), separators=(',', ':'))
+        print(f'face-patch sets remapped to body: {len(remap)} sets, {changed} sprite names')
     json.dump(faces, open(faces_path, 'w'), separators=(',', ':'))
     total = len(faces); found = sum(1 for v in faces.values() if v[5] == 0)
     print(f'faces.json: {total} sets, face detected {found} ({found * 100 // max(1, total)}%), size {os.path.getsize(faces_path) // 1024} KB')
