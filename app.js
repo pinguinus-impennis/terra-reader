@@ -158,10 +158,10 @@ $('search').addEventListener('input', e => { toc.q = e.target.value; renderToc()
    PLAYER
    ===================================================================== */
 const el = {};
-['stage','visual','bgA','bgB','spL','spM','spR','still','stillImg','bgm','code','feed','cur','fill','knob','rail','btnAuto','btnPeek','btnBack','loading'].forEach(id => el[id] = $(id));
+['stage','visual','bgA','bgB','spL','spM','spR','still','stillImg','bgm','code','feed','cur','fill','knob','reach','rail','btnAuto','btnPeek','btnBack','loading'].forEach(id => el[id] = $(id));
 
 const player = {
-  ep: null, steps: [], total: 0, i: -1, chosen: null, branch: null, auto: false,
+  ep: null, steps: [], total: 0, i: -1, maxI: -1, chosen: null, branch: null, auto: false,
   typing: null, finishTyping: null, autoTimer: null, instant: false, current: null, waiting: false, done: false, bgSlot: 0, token: 0,
   stop(){ this.stopTyping(); this.setAuto(false); this.token++; },
   stopTyping(){ if(this.typing){ clearTimeout(this.typing); this.typing = null; this.finishTyping = null; } clearTimeout(this.autoTimer); },
@@ -276,7 +276,8 @@ function preloadAhead(from){
 }
 function seek(){
   const p = Math.max(0, Math.min(1, (player.i + 1) / player.total));
-  el.fill.style.width = (p * 100) + '%'; el.knob.style.left = (p * 100) + '%';
+  const m = Math.max(p, Math.min(1, (player.maxI + 1) / player.total));
+  el.fill.style.width = (p * 100) + '%'; el.knob.style.left = (p * 100) + '%'; el.reach.style.width = (m * 100) + '%';
 }
 
 /* ---- feed ---- */
@@ -346,11 +347,13 @@ function next(){
   do { player.i += 1; st = player.steps[player.i]; if(!st) return finished(); } while(!visible(st));
   applyVisuals(st); seek(); preloadAhead(player.i);
   if(st.kind === 'decision') showChoice(st); else addLine(st);
-  progress.set(player.ep.id, { i: player.i, chosen: player.chosen, total: player.total });
+  player.maxI = Math.max(player.maxI, player.i);
+  progress.set(player.ep.id, { i: player.i, chosen: player.chosen, total: player.total, max: player.maxI });
 }
 function finished(){
   player.i = player.total - 1; player.done = true; seek(); markPast(); el.cur.classList.remove('on'); player.setAuto(false);
-  progress.set(player.ep.id, { i: player.i, chosen: player.chosen, total: player.total, done: true });
+  player.maxI = player.total - 1;
+  progress.set(player.ep.id, { i: player.i, chosen: player.chosen, total: player.total, max: player.maxI, done: true });
   const ln = document.createElement('div'); ln.className = 'ln end';
   ln.innerHTML = '了<b></b><div class="btns"></div>';
   ln.querySelector('b').textContent = player.ep.name || player.ep.code;
@@ -367,6 +370,11 @@ function resetView(){
   el.rail.querySelectorAll('.mark').forEach(m => m.remove()); seek();
 }
 function restart(){ resetView(); player.instant = true; next(); player.instant = false; }
+function jumpTo(target){
+  target = Math.max(0, Math.min(target, player.maxI));
+  const keepMax = player.maxI; gotoIndex(target, player.chosen); player.maxI = keepMax; seek();
+  progress.set(player.ep.id, { i: player.i, chosen: player.chosen, total: player.total, max: player.maxI, done: player.done });
+}
 function gotoIndex(target, chosen){
   resetView(); player.chosen = chosen; player.instant = true;
   while(player.i < target){
@@ -403,7 +411,8 @@ async function openStory(id){
     parsed.steps.forEach((st, k) => { if(st.kind === 'decision'){ const m = document.createElement('i'); m.className = 'mark'; m.style.left = ((k + 1) / player.total * 100) + '%'; el.rail.appendChild(m); } });
     el.loading.hidden = true;
     const p = progress.get(ep.id);
-    if(jump !== null) gotoIndex(Math.min(jump, player.total - 1), null);
+    player.maxI = p ? (typeof p.max === 'number' ? p.max : (p.done ? player.total - 1 : (p.i ?? 0))) : 0;
+    if(jump !== null){ gotoIndex(Math.min(jump, player.total - 1), null); player.maxI = Math.max(player.maxI, player.i); seek(); }
     else if(p && !p.done && typeof p.i === 'number' && p.i >= 0 && p.i < player.total - 1) gotoIndex(p.i, p.chosen ?? null);
     else restart();
   }catch(err){
@@ -417,13 +426,23 @@ async function openStory(id){
 
 /* ---- input: tap vs scroll ---- */
 let pd = null;
-el.stage.addEventListener('pointerdown', e => { pd = { x: e.clientX, y: e.clientY, btn: !!e.target.closest('button') }; });
+el.stage.addEventListener('pointerdown', e => { pd = { x: e.clientX, y: e.clientY, btn: !!(e.target.closest('button') || e.target.closest('.seek')) }; });
 el.stage.addEventListener('pointerup', e => {
   if(!pd) return; const moved = Math.hypot(e.clientX - pd.x, e.clientY - pd.y); const wasBtn = pd.btn; pd = null;
   if(wasBtn || moved > 8) return;
   if(el.stage.classList.contains('peek')){ setPeek(false); return; }
   next();
 });
+/* seek bar: drag or tap to go back (never beyond the furthest step read) */
+(() => {
+  const bar = document.querySelector('.seek'); let dragging = false;
+  const frac = e => { const r = el.rail.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
+  const preview = e => { const f = frac(e); const cap = (player.maxI + 1) / player.total; const p = Math.min(f, cap); el.knob.style.left = (p * 100) + '%'; el.fill.style.width = (p * 100) + '%'; return p; };
+  bar.addEventListener('pointerdown', e => { if(!player.steps.length) return; dragging = true; bar.classList.add('drag'); bar.setPointerCapture(e.pointerId); preview(e); e.stopPropagation(); });
+  bar.addEventListener('pointermove', e => { if(dragging) preview(e); });
+  const end = e => { if(!dragging) return; dragging = false; bar.classList.remove('drag'); const p = preview(e); jumpTo(Math.round(p * player.total) - 1); };
+  bar.addEventListener('pointerup', end); bar.addEventListener('pointercancel', end);
+})();
 el.btnAuto.addEventListener('click', () => player.setAuto(!player.auto));
 el.btnPeek.addEventListener('click', () => setPeek(!el.stage.classList.contains('peek')));
 el.btnBack.addEventListener('click', () => { location.hash = player.ep ? '#/g/' + encodeURIComponent(player.ep.g.id) : ''; });

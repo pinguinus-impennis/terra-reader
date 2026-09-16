@@ -127,9 +127,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sys);outline-of
 .opt:hover,.opt:focus-visible{border-color:var(--name);transform:translateX(3px)}
 .opt .n{font-family:var(--mono);font-size:11px;color:var(--name)}
 
-.seek{position:relative;height:calc(22px + env(safe-area-inset-bottom));flex:none;background:var(--panel);padding:0 20px calc(8px + env(safe-area-inset-bottom));display:flex;align-items:center}
+.seek{position:relative;height:calc(30px + env(safe-area-inset-bottom));flex:none;background:var(--panel);padding:0 20px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;touch-action:none;cursor:pointer}
+.seek .reach{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:2px;background:rgba(227,164,74,.28)}
+.seek.drag .knob{transform:translate(-50%,-50%) scale(1.5);transition:none}
+.seek.drag .fill{transition:none}
 .seek .rail{position:relative;width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,.12)}
-.seek .fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:2px;background:linear-gradient(to right,rgba(227,164,74,.55),var(--name));transition:width .35s ease}
+.seek .fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:2px;background:linear-gradient(to right,rgba(227,164,74,.7),var(--name));transition:width .35s ease}
 .seek .knob{position:absolute;top:50%;left:0;width:9px;height:9px;border-radius:50%;background:var(--name);transform:translate(-50%,-50%);box-shadow:0 0 0 3px rgba(227,164,74,.2);transition:left .35s ease}
 .seek .mark{position:absolute;top:-1px;width:2px;height:5px;background:var(--sys);opacity:.7;transform:translateX(-50%)}
 
