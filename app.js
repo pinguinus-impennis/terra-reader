@@ -17,7 +17,7 @@ const store = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
   del(k){ try{ localStorage.removeItem(k); }catch(e){} },
 };
-const settings = Object.assign({ doc: 'ドクター', font: 16, proxy: true, sys: false, faces: true }, store.get('tr:settings', {}));
+const settings = Object.assign({ doc: 'ドクター', font: 16, proxy: true, sys: false, faces: true, band: false }, store.get('tr:settings', {}));
 function saveSettings(){ store.set('tr:settings', settings); applySettings(); }
 function applySettings(){ document.documentElement.style.setProperty('--fs', settings.font + 'px'); }
 const progress = {
@@ -171,7 +171,8 @@ const player = {
 /* ---- layout ---- */
 function layout(){
   const seam = 72;
-  const h = el.stage.classList.contains('hasStill') ? el.stage.clientWidth * 9 / 16 + seam : el.stage.clientHeight * 0.50 + seam * 0.6;
+  el.stage.classList.toggle('band', !!settings.band);
+  const h = (settings.band || el.stage.classList.contains('hasStill')) ? el.stage.clientWidth * 9 / 16 + seam : el.stage.clientHeight * 0.50 + seam * 0.6;
   el.visual.style.height = Math.round(h) + 'px';
   // newest line rests a little above the middle of the text panel
   const panelH = el.stage.clientHeight - h + seam - 22;
@@ -383,7 +384,7 @@ function setPeek(on){ el.stage.classList.toggle('peek', on); el.btnPeek.title = 
 /* ---- open a story ---- */
 async function openStory(id){
   let jump = null;                                   // #/r/<id>?i=<step>  (debug / sharing a position)
-  const q = id.indexOf('?'); if(q >= 0){ const qs = id.slice(q); const m = /[?&]i=(\d+)/.exec(qs); if(m) jump = Number(m[1]); if(/[?&]faces=0/.test(qs)) settings.faces = false; if(/[?&]faces=1/.test(qs)) settings.faces = true; id = id.slice(0, q); }
+  const q = id.indexOf('?'); if(q >= 0){ const qs = id.slice(q); const m = /[?&]i=(\d+)/.exec(qs); if(m) jump = Number(m[1]); if(/[?&]faces=0/.test(qs)) settings.faces = false; if(/[?&]faces=1/.test(qs)) settings.faces = true; if(/[?&]band=1/.test(qs)) settings.band = true; if(/[?&]band=0/.test(qs)) settings.band = false; id = id.slice(0, q); }
   const ep = findEp(id);
   if(!ep){ location.hash = ''; return; }
   const token = ++player.token;
@@ -435,13 +436,13 @@ document.addEventListener('keydown', e => {
    SETTINGS SHEET
    ===================================================================== */
 function openSettings(){
-  $('setDoc').value = settings.doc; $('setProxy').checked = !!settings.proxy; $('setSys').checked = !!settings.sys; $('setFaces').checked = !!settings.faces;
+  $('setDoc').value = settings.doc; $('setProxy').checked = !!settings.proxy; $('setSys').checked = !!settings.sys; $('setFaces').checked = !!settings.faces; $('setBand').checked = !!settings.band;
   document.querySelectorAll('#setFont button').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === Number(settings.font)));
   $('settings').hidden = false;
 }
 function closeSettings(){
-  settings.doc = $('setDoc').value.trim() || 'ドクター'; settings.proxy = $('setProxy').checked; settings.sys = $('setSys').checked; settings.faces = $('setFaces').checked;
-  saveSettings(); $('settings').hidden = true; if(!$('toc').hidden) renderToc(); placeSprites();
+  settings.doc = $('setDoc').value.trim() || 'ドクター'; settings.proxy = $('setProxy').checked; settings.sys = $('setSys').checked; settings.faces = $('setFaces').checked; settings.band = $('setBand').checked;
+  saveSettings(); $('settings').hidden = true; if(!$('toc').hidden) renderToc(); layout(); placeSprites();
 }
 $('btnSettings').addEventListener('click', openSettings);
 $('btnCloseSettings').addEventListener('click', closeSettings);

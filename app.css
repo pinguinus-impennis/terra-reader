@@ -155,3 +155,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sys);outline-of
   .bg img,.sp,.still,.visual,.panel,.ln,.seek .fill,.seek .knob{transition:none}
   .cur,.loading span{animation:none}
 }
+
+/* 16:9 band mode: picture area is always the still's shape; sprites sit like the game's landscape stage */
+.stage.band .sp{height:135%;bottom:-33%}
+.stage.band .sp.pl{left:24%}.stage.band .sp.pr{left:76%}
+.stage.band .sp.pl.three{left:16%}.stage.band .sp.pr.three{left:84%}
+.stage.band .bg img{object-position:center 40%}
