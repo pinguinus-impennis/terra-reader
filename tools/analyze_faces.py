@@ -127,6 +127,9 @@ def main():
             if setkey(path) in remap: sprites[name] = remap[setkey(path)]; changed += 1
         json.dump(sprites, open(os.path.join(DATA, 'sprites.json'), 'w', encoding='utf-8'), separators=(',', ':'))
         print(f'face-patch sets remapped to body: {len(remap)} sets, {changed} sprite names')
+    keep = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'faces_overrides.json')   # hand corrections always win
+    if os.path.exists(keep):
+        for k, v in json.load(open(keep, encoding='utf-8')).items(): v = list(v); v[5] = 2; faces[k] = v
     json.dump(faces, open(faces_path, 'w'), separators=(',', ':'))
     total = len(faces); found = sum(1 for v in faces.values() if v[5] == 0)
     print(f'faces.json: {total} sets, face detected {found} ({found * 100 // max(1, total)}%), size {os.path.getsize(faces_path) // 1024} KB')
