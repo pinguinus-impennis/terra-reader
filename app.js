@@ -239,8 +239,8 @@ function placeSprites(){
     img.classList.toggle('dim', dim); img.classList.toggle('front', n === 3 && k === front);
     const f = (settings.faces && img.dataset.path) ? FACES[setKey(img.dataset.path)] : null;
     if(!f || f[0] == null || f[5] === 1 || !img.naturalHeight){ img.classList.remove('fx'); img.style.cssText = ''; return; }   // flag 1 = only an estimate: keep the artist's proportions instead
-    const FACE = u * (n === 1 ? 88 : n === 2 ? 72 : (isSide ? 52 : 64));
-    const eye = VH * (isSide ? .40 : .36);
+    const FACE = u * (settings.band ? (n === 1 ? 66 : n === 2 ? 56 : (isSide ? 40 : 48)) : (n === 1 ? 88 : n === 2 ? 72 : (isSide ? 52 : 64)));
+    const eye = VH * (settings.band ? (isSide ? .52 : .47) : (isSide ? .40 : .36));   // 16:9 band: keep faces clear of the top bar
     const heads = (f[4] - f[1]) / f[2];
     const off = Math.max(-0.7 * FACE, Math.min(0.7 * FACE, 0.45 * (heads - 7.4) * FACE));
     const s = FACE / (f[2] * img.naturalHeight);
