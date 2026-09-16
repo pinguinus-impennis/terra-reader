@@ -57,8 +57,8 @@ function spriteCandidates(name){
   const hit = SPRITES[n]; if(hit) return ['characters/' + hit + '.png'];
   const base = n.split('#')[0].split('$')[0];
   const out = [`characters/${base}/${n}.png`, `characters/${n}.png`];
-  let m = /^(.*)_1#0*(\d+)(\$\d+)?$/.exec(n);
-  if(m) out.push(`characters/${m[1]}_1/${m[1]}_${m[2]}.png`, `characters/${m[1]}_${m[2]}.png`);
+  let m = /^(.*)_(\d+)#0*(\d+)(\$\d+)?$/.exec(n);
+  if(m) out.push(`characters/${m[1]}_${m[2]}/${m[1]}_${m[3]}.png`, `characters/${m[1]}_${m[3]}.png`);
   m = /^(.*)#0*(\d+)(\$\d+)?$/.exec(n);
   if(m) out.push(`characters/${m[1]}/${m[1]}_${m[2]}.png`, `characters/${m[1]}/${m[1]}#${m[2]}$1.png`);
   if(!n.includes('#')) out.push(`characters/${n}_1/${n}_1.png`, `characters/${n}/${n}#1$1.png`);
@@ -250,7 +250,7 @@ function placeSprites(){
     if(figTop < -0.10 * VH) top += Math.min(-0.10 * VH - figTop, 0.45 * FACE);
     img.classList.add('fx');
     img.style.height = h + 'px'; img.style.width = w + 'px';
-    img.style.left = (W * xs[i] - f[0] * w) + 'px'; img.style.top = top + 'px';
+    img.style.left = (W * xs[i] - f[0] * w) + 'px'; img.style.top = top + 'px'; img.style.transformOrigin = (f[0] * 100) + '% ' + (f[1] * 100) + '%';
   });
 }
 function setBgm(key){

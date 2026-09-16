@@ -62,8 +62,8 @@ def main():
         if n.startswith('$'): n = str(sv.get(n[1:], n))
         n = n.lower(); base = n.split('#')[0].split('$')[0]
         out = [f'characters/{base}/{n}.png', f'characters/{n}.png']
-        m = re.match(r'^(.*)_1#0*(\d+)(\$\d+)?$', n)
-        if m: out += [f'characters/{m.group(1)}_1/{m.group(1)}_{m.group(2)}.png', f'characters/{m.group(1)}_{m.group(2)}.png']
+        m = re.match(r'^(.*)_(\d+)#0*(\d+)(\$\d+)?$', n)
+        if m: out += [f'characters/{m.group(1)}_{m.group(2)}/{m.group(1)}_{m.group(3)}.png', f'characters/{m.group(1)}_{m.group(3)}.png']
         m = re.match(r'^(.*)#0*(\d+)(\$\d+)?$', n)
         if m: out += [f'characters/{m.group(1)}/{m.group(1)}_{m.group(2)}.png', f'characters/{m.group(1)}_{m.group(2)}.png', f'characters/{m.group(1)}/{m.group(1)}#{m.group(2)}$1.png']
         if '#' not in n: out += [f'characters/{n}_1/{n}_1.png', f'characters/{n}/{n}_1.png', f'characters/{n}/{n}#1$1.png', f'characters/{n}_1/{n}_1#1$1.png']
