@@ -83,7 +83,7 @@ function card(it){
     <div class="meta"><span class="nm" title="${it.k}">${it.name}</span><span class="use">${it.use} 回 / ${it.eps} 話</span></div>
     <div class="btns"><button data-a="ok">OK</button><button data-a="reset">自動に戻す</button><button data-a="est">推定にする</button></div>`;
   const cv = el.querySelector('canvas'), zc = el.querySelectorAll('canvas')[1];
-  const img = new Image(); img.src = it.img;
+  const img = new Image(); img.src = it.img.replace(/[^/]+$/, s => encodeURIComponent(s));   // file names contain '#' and '$'
   const draw = () => {
     const f = current(it), W = img.naturalWidth, H = img.naturalHeight; if(!W) return;
     cv.width = W; cv.height = H; const g = cv.getContext('2d'); g.clearRect(0, 0, W, H); g.drawImage(img, 0, 0);
