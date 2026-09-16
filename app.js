@@ -172,7 +172,8 @@ const player = {
 function layout(){
   const seam = 72;
   el.stage.classList.toggle('band', !!settings.band);
-  const h = (settings.band || el.stage.classList.contains('hasStill')) ? el.stage.clientWidth * 9 / 16 + seam : el.stage.clientHeight * 0.50 + seam * 0.6;
+  const W = el.stage.clientWidth;
+  const h = (settings.band || el.stage.classList.contains('hasStill')) ? W * 9 / 16 + seam : W * 3 / 4 + seam * 0.6;   // picture area: 4:3 of the width
   el.visual.style.height = Math.round(h) + 'px';
   // newest line rests a little above the middle of the text panel
   const panelH = el.stage.clientHeight - h + seam - 22;
