@@ -22,10 +22,11 @@
 | `data/index.json` | 目次。`story_review_table.json` から生成 |
 | `data/sprites.json` | 台本の立ち絵名 → 画像パス |
 | `data/bgm.json` | BGM の変数名 → 曲名 |
+| `data/faces.json` | 立ち絵の体ごとの顔位置・大きさ（顔基準で大きさと高さを揃えるため）。`tools/analyze_faces.py` で生成 |
 
 ## データの更新
 
-新章・新イベントが追加されたら `data/` の3ファイルを作り直します（生成スクリプトは `tools/` 参照）。本文と画像は常に最新の取得元を参照するため、更新作業は目次だけです。
+新章・新イベントが追加されたら `data/` を作り直します。`tools/build_data.py` で目次・立ち絵表・BGM 表、続けて `tools/analyze_faces.py` で顔位置表（OpenCV が必要。解析済みの体は再利用されるので追加分だけ処理します）。本文と画像は常に最新の取得元を参照するため、更新作業は目次だけです。
 
 ## ローカルで動かす
 

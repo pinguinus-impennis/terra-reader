@@ -27,14 +27,15 @@ const progress = {
 };
 
 /* ---------------- data ---------------- */
-let INDEX = null, SPRITES = {}, BGM = {};
+let INDEX = null, SPRITES = {}, BGM = {}, FACES = {};
 async function loadData(){
-  const [i, s, b] = await Promise.all([
+  const [i, s, b, f] = await Promise.all([
     fetch('data/index.json').then(r => r.json()),
     fetch('data/sprites.json').then(r => r.json()).catch(() => ({})),
     fetch('data/bgm.json').then(r => r.json()).catch(() => ({})),
+    fetch('data/faces.json').then(r => r.json()).catch(() => ({})),
   ]);
-  INDEX = i; SPRITES = s; BGM = b;
+  INDEX = i; SPRITES = s; BGM = b; FACES = f;
   $('tocSub').textContent = 'ja_JP · ' + INDEX.generated + ' · ' + INDEX.groups.reduce((n, g) => n + g.eps.length, 0) + ' 話';
 }
 const allEps = () => INDEX.groups.flatMap(g => g.eps.map(e => ({ ...e, g })));
@@ -47,7 +48,7 @@ function proxied(path, q){ return SRC.proxy + encodeURIComponent(SRC.img + path)
 function urlsFor(kind, path){
   const q = kind === 'sprite' ? '&h=720' : '&w=1000';
   const list = [];
-  if(settings.proxy) list.push(proxied(path, q));
+  if(settings.proxy && !path.includes('#')) list.push(proxied(path, q));   // wsrv.nl cannot fetch paths with '#'
   list.push(rawUrl(path));
   return list;
 }
@@ -67,9 +68,16 @@ function spriteCandidates(name){
 function loadInto(img, urls){
   return new Promise(res => {
     let k = 0;
-    const tryNext = () => { if(k >= urls.length){ res(false); return; } img.onerror = () => { k++; tryNext(); }; img.onload = () => res(true); img.src = urls[k]; };
+    const tryNext = () => { if(k >= urls.length){ res(-1); return; } img.onerror = () => { k++; tryNext(); }; img.onload = () => res(k); img.src = urls[k]; };
     tryNext();
   });
+}
+/* sprite set key: same body, different expressions share one face record */
+function setKey(path){
+  path = path.replace(/^characters\//, '').replace(/\.png$/i, '');
+  const i = path.lastIndexOf('/'); const d = i >= 0 ? path.slice(0, i) : ''; let f = i >= 0 ? path.slice(i + 1) : path;
+  if(f.includes('#')) f = f.replace(/#\d+/, ''); else if(d) f = d;
+  return d ? d + '/' + f : f;
 }
 const preloadCache = new Map();
 function preload(urls){ const u = urls[0]; if(preloadCache.has(u)) return; const im = new Image(); preloadCache.set(u, im); loadInto(im, urls); }
@@ -168,6 +176,7 @@ function layout(){
   // newest line rests a little above the middle of the text panel
   const panelH = el.stage.clientHeight - h + seam - 22;
   el.stage.style.setProperty('--feedpad', Math.round(panelH * 0.5) + 'px');
+  placeSprites();
 }
 addEventListener('resize', layout);
 
@@ -177,37 +186,69 @@ function setBg(name){
   if(!name){ el.bgA.classList.remove('on'); el.bgB.classList.remove('on'); return; }
   if(cur.classList.contains('on') && cur.dataset.name === name) return;
   nxt.dataset.name = name;
-  loadInto(nxt, urlsFor('bg', `backgrounds/${name.toLowerCase()}.png`)).then(ok => { if(ok && nxt.dataset.name === name){ nxt.classList.add('on'); cur.classList.remove('on'); } });
+  loadInto(nxt, urlsFor('bg', `backgrounds/${name.toLowerCase()}.png`)).then(k => { const ok = k >= 0; if(ok && nxt.dataset.name === name){ nxt.classList.add('on'); cur.classList.remove('on'); } });
   player.bgSlot ^= 1;
 }
 function setStill(name){
   if(!name){ el.still.classList.remove('on'); el.stage.classList.remove('hasStill'); layout(); return; }
   el.stillImg.dataset.name = name;
-  loadInto(el.stillImg, urlsFor('still', `images/${name.toLowerCase()}.png`)).then(ok => {
-    if(!ok || el.stillImg.dataset.name !== name) return;
+  loadInto(el.stillImg, urlsFor('still', `images/${name.toLowerCase()}.png`)).then(k => {
+    if(k < 0 || el.stillImg.dataset.name !== name) return;
     el.still.classList.add('on'); el.stage.classList.add('hasStill'); layout();
   });
 }
 function setChars(chars, focus){
   const c = chars || { l: null, m: null, r: null };
+  player.charState = { chars: c, focus: focus || 'all' };
   const shown = ['l','m','r'].filter(k => c[k]);
   const three = shown.length === 3;
-  const pos = (k) => {
-    if(three) return k;                              // l m r
-    if(shown.length === 2){ if(k === shown[0]) return 'l'; return 'r'; }
-    return 'm';
-  };
+  const pos = (k) => three ? k : (shown.length === 2 ? (k === shown[0] ? 'l' : 'r') : 'm');
   for(const k of ['l','m','r']){
     const img = el['sp' + k.toUpperCase()], name = c[k];
-    if(!name){ img.classList.remove('on'); continue; }
-    const dim = shown.length > 1 && focus && focus !== 'all' && focus !== 'keep' && focus !== k;
-    const dimAll = focus === 'none' && shown.length > 0;
-    img.className = 'sp on p' + pos(k) + (three ? ' three' : '') + ((dim || dimAll) ? ' dim' : '');
+    if(!name){ img.classList.remove('on'); img.style.cssText = ''; continue; }
+    img.className = 'sp on p' + pos(k) + (three ? ' three' : '');
     if(img.dataset.name !== name){
-      img.dataset.name = name;
-      loadInto(img, spriteCandidates(name).flatMap(p => urlsFor('sprite', p))).then(ok => { if(!ok && img.dataset.name === name) img.classList.remove('on'); });
+      img.dataset.name = name; img.dataset.path = ''; img.style.cssText = ''; img.classList.remove('fx');
+      const paths = spriteCandidates(name);
+      const list = paths.flatMap(p => urlsFor('sprite', p).map(u => ({ u, p })));
+      loadInto(img, list.map(x => x.u)).then(idx => {
+        if(img.dataset.name !== name) return;
+        if(idx < 0){ img.classList.remove('on'); return; }
+        img.dataset.path = list[idx].p; placeSprites();
+      });
     }
   }
+  placeSprites();
+}
+/* face-anchored placement: equal face size, height shown as head offset, 3 people staged in depth */
+function placeSprites(){
+  const st = player.charState; if(!st) return;
+  const c = st.chars, focus = st.focus;
+  const shown = ['l','m','r'].filter(k => c[k]); const n = shown.length; if(!n) return;
+  const W = el.stage.clientWidth, VH = el.visual.clientHeight, u = W / 400;
+  const loaded = shown.filter(k => el['sp' + k.toUpperCase()].classList.contains('on'));
+  const front = n === 3 ? ((focus && loaded.includes(focus)) ? focus : (loaded.includes('m') ? 'm' : (loaded[0] || 'm'))) : null;
+  const xs = n === 1 ? [.5] : n === 2 ? [.28, .72] : [.17, .5, .83];
+  shown.forEach((k, i) => {
+    const img = el['sp' + k.toUpperCase()];
+    const isSide = n === 3 && k !== front;
+    const dim = isSide || focus === 'none' || (n > 1 && focus && focus !== 'all' && focus !== 'keep' && focus !== k);
+    img.classList.toggle('dim', dim); img.classList.toggle('front', n === 3 && k === front);
+    const f = img.dataset.path ? FACES[setKey(img.dataset.path)] : null;
+    if(!f || f[0] == null || !img.naturalHeight){ img.classList.remove('fx'); img.style.cssText = ''; return; }
+    const FACE = u * (n === 1 ? 95 : n === 2 ? 80 : (isSide ? 58 : 72));
+    const eye = VH * (isSide ? .40 : .36);
+    const heads = (f[4] - f[1]) / f[2];
+    const off = Math.max(-0.7 * FACE, Math.min(0.7 * FACE, 0.45 * (heads - 7.4) * FACE));
+    const s = FACE / (f[2] * img.naturalHeight);
+    const h = img.naturalHeight * s, w = img.naturalWidth * s;
+    let top = eye - off - f[1] * h;
+    const figTop = top + f[3] * h;                       // keep tall hats/horns mostly inside the frame
+    if(figTop < -0.10 * VH) top += Math.min(-0.10 * VH - figTop, 0.45 * FACE);
+    img.classList.add('fx');
+    img.style.height = h + 'px'; img.style.width = w + 'px';
+    img.style.left = (W * xs[i] - f[0] * w) + 'px'; img.style.top = top + 'px';
+  });
 }
 function setBgm(key){
   if(key === null || key === undefined){ el.bgm.hidden = true; return; }
@@ -318,7 +359,7 @@ function finished(){
   el.feed.appendChild(ln); scrollEnd();
 }
 function resetView(){
-  player.stopTyping(); player.i = -1; player.chosen = null; player.branch = null; player.done = false; player.waiting = false; player.current = null;
+  player.stopTyping(); player.i = -1; player.chosen = null; player.branch = null; player.done = false; player.waiting = false; player.current = null; player.charState = null;
   el.feed.innerHTML = '<div class="spacer"></div>'; setStill(null); setChars(null, 'all'); setBg(null); setBgm(null); el.cur.classList.remove('on');
   el.rail.querySelectorAll('.mark').forEach(m => m.remove()); seek();
 }
@@ -340,6 +381,8 @@ function setPeek(on){ el.stage.classList.toggle('peek', on); el.btnPeek.title = 
 
 /* ---- open a story ---- */
 async function openStory(id){
+  let jump = null;                                   // #/r/<id>?i=<step>  (debug / sharing a position)
+  const q = id.indexOf('?'); if(q >= 0){ const m = /[?&]i=(\d+)/.exec(id.slice(q)); if(m) jump = Number(m[1]); id = id.slice(0, q); }
   const ep = findEp(id);
   if(!ep){ location.hash = ''; return; }
   const token = ++player.token;
@@ -357,7 +400,8 @@ async function openStory(id){
     parsed.steps.forEach((st, k) => { if(st.kind === 'decision'){ const m = document.createElement('i'); m.className = 'mark'; m.style.left = ((k + 1) / player.total * 100) + '%'; el.rail.appendChild(m); } });
     el.loading.hidden = true;
     const p = progress.get(ep.id);
-    if(p && !p.done && typeof p.i === 'number' && p.i >= 0 && p.i < player.total - 1) gotoIndex(p.i, p.chosen ?? null);
+    if(jump !== null) gotoIndex(Math.min(jump, player.total - 1), null);
+    else if(p && !p.done && typeof p.i === 'number' && p.i >= 0 && p.i < player.total - 1) gotoIndex(p.i, p.chosen ?? null);
     else restart();
   }catch(err){
     if(token !== player.token) return;
