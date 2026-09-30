@@ -27,15 +27,17 @@ const progress = {
 };
 
 /* ---------------- data ---------------- */
-let INDEX = null, SPRITES = {}, BGM = {}, FACES = {};
+let INDEX = null, SPRITES = {}, BGM = {}, FACES = {}, METRICS = {};
 async function loadData(){
-  const [i, s, b, f] = await Promise.all([
+  const [i, s, b, f, m] = await Promise.all([
     fetch('data/index.json').then(r => r.json()),
     fetch('data/sprites.json').then(r => r.json()).catch(() => ({})),
     fetch('data/bgm.json').then(r => r.json()).catch(() => ({})),
     fetch('data/faces.json').then(r => r.json()).catch(() => ({})),
+    fetch('data/metrics.json').then(r => r.json()).catch(() => ({})),
   ]);
   INDEX = i; SPRITES = s; BGM = b; FACES = f;
+  for(const k in m) METRICS[k.toLowerCase()] = m[k];
   $('tocSub').textContent = 'ja_JP · ' + INDEX.generated + ' · ' + INDEX.groups.reduce((n, g) => n + g.eps.length, 0) + ' 話';
 }
 const allEps = () => INDEX.groups.flatMap(g => g.eps.map(e => ({ ...e, g })));
@@ -71,6 +73,12 @@ function loadInto(img, urls){
     const tryNext = () => { if(k >= urls.length){ res(-1); return; } img.onerror = () => { k++; tryNext(); }; img.onload = () => res(k); img.src = urls[k]; };
     tryNext();
   });
+}
+/* sprite base id (game metrics are per base): folder name, or a flat file name without #n / $m */
+function baseOf(path){
+  path = path.replace(/^characters\//, '').replace(/\.png$/i, '');
+  const i = path.lastIndexOf('/');
+  return (i >= 0 ? path.slice(0, i) : path.replace(/[#$]\d+/g, '')).toLowerCase();
 }
 /* sprite set key: same body, different expressions share one face record */
 function setKey(path){
@@ -237,6 +245,23 @@ function placeSprites(){
     const isSide = n === 3 && k !== front;
     const dim = isSide || focus === 'none' || (n > 1 && focus && focus !== 'all' && focus !== 'keep' && focus !== k);
     img.classList.toggle('dim', dim); img.classList.toggle('front', n === 3 && k === front);
+    const metric = (settings.faces && img.dataset.path) ? METRICS[baseOf(img.dataset.path)] : null;
+    const fb = img.dataset.path ? FACES[setKey(img.dataset.path)] : null;       // figure extent (for the head guard)
+    if(metric && metric[0] > 0 && img.naturalHeight){
+      /* the game's own placement: a 1280x720 stage, the canvas drawn metric[0] units tall,
+         its centre metric[1] units above the floor, shifted metric[3] units sideways */
+      const zoom = n === 1 ? 1.35 : n === 2 ? 1.18 : 1.15;   // the game's 16:9 stage is wider than ours: pull back a little as the cast grows
+      const k = VH * zoom / 720 * (isSide ? 0.9 : 1);
+      const h = metric[0] * k, w = h * img.naturalWidth / img.naturalHeight;
+      const stageTop = VH * (settings.band ? 0.16 : 0.08);          // where the game's stage top lands, so heads stay put whatever the zoom
+      let top = stageTop + (720 - metric[1] - metric[0] / 2) * k;
+      if(fb){ const figTop = top + fb[3] * h; if(figTop < -0.08 * VH) top += Math.min(-0.08 * VH - figTop, 0.25 * h); }
+      img.classList.add('fx');
+      img.style.height = h + 'px'; img.style.width = w + 'px';
+      img.style.left = (W * xs[i] - w / 2 + (metric[3] || 0) * k) + 'px'; img.style.top = top + 'px';
+      img.style.transformOrigin = '50% ' + ((fb ? fb[1] : 0.15) * 100) + '%';
+      return;
+    }
     const f = (settings.faces && img.dataset.path) ? FACES[setKey(img.dataset.path)] : null;
     if(!f || f[0] == null || f[5] === 1 || !img.naturalHeight){ img.classList.remove('fx'); img.style.cssText = ''; return; }   // flag 1 = only an estimate: keep the artist's proportions instead
     const FACE = u * (settings.band ? (n === 1 ? 66 : n === 2 ? 56 : (isSide ? 40 : 48)) : (n === 1 ? 88 : n === 2 ? 72 : (isSide ? 52 : 64)));
@@ -416,6 +441,7 @@ async function openStory(id){
     else if(p && !p.done && typeof p.i === 'number' && p.i >= 0 && p.i < player.total - 1) gotoIndex(p.i, p.chosen ?? null);
     else restart();
   }catch(err){
+    console.error(err);
     if(token !== player.token) return;
     el.loading.hidden = true;
     const ln = document.createElement('div'); ln.className = 'ln err';

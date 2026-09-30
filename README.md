@@ -22,6 +22,7 @@
 | `data/index.json` | 目次。`story_review_table.json` から生成 |
 | `data/sprites.json` | 台本の立ち絵名 → 画像パス |
 | `data/bgm.json` | BGM の変数名 → 曲名 |
+| `data/metrics.json` | 立ち絵ごとのゲーム内描画サイズ・位置（1280×720 の舞台単位）。[Timo's Arknights Story Reader](https://arknights.timo.beer/) の `charmetrics.json` を作者の了承のもと利用 |
 | `data/faces.json` | 立ち絵の体ごとの顔位置・大きさ（顔基準で大きさと高さを揃えるため）。`tools/analyze_faces.py` で生成 |
 
 ## データの更新
