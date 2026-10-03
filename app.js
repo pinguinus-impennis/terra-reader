@@ -112,14 +112,17 @@ const music = (() => {
     const step = () => { if(cur !== a) return; const t = Math.min(1, (performance.now() - t0) / ms); a.volume = v1 * t; if(t < 1) requestAnimationFrame(step); };
     requestAnimationFrame(step);
   }
-  async function play(stem){
+  async function play(stem, key){
     if(!settings.bgm || !settings.bgmBase || !stem) return;
-    const key = stem.replace(/_(loop|intro)$/, '');
-    if(key === curKey && cur && !cur.paused) return;
-    const idx = await loadIndex();
-    const loopRel = idx[key + '_loop'] || idx[stem] || idx[key], introRel = idx[key + '_intro'];
+    const k = String(key || '').replace(/^\$/, '');
+    const track = stem.replace(/_(loop|intro)$/, '');
+    if(track === curKey && cur && !cur.paused) return;
+    // storage paths come with data/bgm.json (no cross-origin index needed); the index is only a fallback
+    const recLoop = BGM[k.replace(/_intro$/, '_loop')] || BGM[k], recIntro = BGM[k.replace(/_loop$/, '_intro')];
+    let loopRel = recLoop && recLoop[2], introRel = recIntro && recIntro[2];
+    if(!loopRel){ const idx = await loadIndex(); loopRel = idx[track + '_loop'] || idx[stem] || idx[track]; introRel = introRel || idx[track + '_intro']; }
     if(!loopRel){ return; }
-    curKey = key; pendingKey = key;
+    curKey = track; pendingKey = track;
     const old = cur; if(old) fadeOut(old, 1200);
     const a = new Audio(); a.preload = 'auto'; cur = a;
     const startLoop = () => { if(cur !== a) return; a.src = base() + loopRel; a.loop = true; a.currentTime = 0; a.play().catch(() => {}); };
@@ -327,7 +330,7 @@ function setBgm(key){
   const k = String(key).replace(/^\$/, '');
   const rec = BGM[k]; const short = Array.isArray(rec) ? rec[0] : (rec || k.replace(/^(m_dia_|m_sys_|m_bat_)/, '').replace(/_(loop|intro)$/, ''));
   el.bgm.hidden = false; el.bgm.textContent = '♪ ' + short;
-  music.play(Array.isArray(rec) ? rec[1] : null);
+  music.play(Array.isArray(rec) ? rec[1] : null, k);
 }
 function applyVisuals(st){
   if('bg' in st) setBg(st.bg);

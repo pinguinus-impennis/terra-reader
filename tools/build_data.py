@@ -82,6 +82,12 @@ def main():
             stem = v.split('/')[-1].lower()
             short = re.sub(r'^(m_dia_|m_sys_|m_bat_|m_avg_)', '', stem); short = re.sub(r'_(loop|intro)$', '', short)
             bgm[k] = [short, stem]
+    # if BGM has been extracted (tools/bgm/build_bgm.py), attach each clip's storage path so the app needs no index fetch
+    files_path = os.path.join(os.path.dirname(ROOT), '_cache', 'bgm', 'opus', 'bgm_files.json')
+    if os.path.exists(files_path):
+        files = json.load(open(files_path, encoding='utf-8'))
+        for k, v in bgm.items():
+            if v[1] in files: v.append(files[v[1]])
     json.dump(bgm, open(os.path.join(OUT, 'bgm.json'), 'w', encoding='utf-8'), separators=(',', ':'))
     print('bgm.json', len(bgm))
 
