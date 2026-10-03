@@ -60,11 +60,17 @@ def main():
         p = os.path.join(src, rel); key = f'{prefix}/{rel}'
         if existing.get(key) != os.path.getsize(p): todo.append((p, key))
     todo.append((os.path.join(src, 'bgm_files.json'), f'{prefix}/bgm_files.json'))
+    sprites_dir = os.path.join(a.work, '..', 'sprites', 'webp')          # bodies from tools/sprites/build_missing_sprites.py
+    if os.path.isdir(sprites_dir):
+        for f in os.listdir(sprites_dir):
+            if f.lower().endswith('.webp'):
+                p = os.path.join(sprites_dir, f); key = f'{prefix}/sprites/{f}'
+                if existing.get(key) != os.path.getsize(p): todo.append((p, key))
     print(f'{len(index)} clips, uploading {len(todo)} files')
     def up(item):
         p, key = item
-        ct = 'audio/ogg' if p.endswith('.opus') else 'application/json'
-        s3.upload_file(p, bucket, key, ExtraArgs={'ContentType': ct, 'CacheControl': 'public, max-age=31536000, immutable' if p.endswith('.opus') else 'public, max-age=300'})
+        ct = 'audio/ogg' if p.endswith('.opus') else 'image/webp' if p.endswith('.webp') else 'application/json'
+        s3.upload_file(p, bucket, key, ExtraArgs={'ContentType': ct, 'CacheControl': 'public, max-age=31536000, immutable' if p.endswith(('.opus', '.webp')) else 'public, max-age=300'})
         return key
     n = 0
     with concurrent.futures.ThreadPoolExecutor(8) as ex:

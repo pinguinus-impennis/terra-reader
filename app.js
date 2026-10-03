@@ -27,16 +27,17 @@ const progress = {
 };
 
 /* ---------------- data ---------------- */
-let INDEX = null, SPRITES = {}, BGM = {}, FACES = {}, METRICS = {};
+let INDEX = null, SPRITES = {}, BGM = {}, FACES = {}, METRICS = {}, EXTRA = {};
 async function loadData(){
-  const [i, s, b, f, m] = await Promise.all([
+  const [i, s, b, f, m, x] = await Promise.all([
     fetch('data/index.json').then(r => r.json()),
     fetch('data/sprites.json').then(r => r.json()).catch(() => ({})),
     fetch('data/bgm.json').then(r => r.json()).catch(() => ({})),
     fetch('data/faces.json').then(r => r.json()).catch(() => ({})),
     fetch('data/metrics.json').then(r => r.json()).catch(() => ({})),
+    fetch('data/sprites_extra.json').then(r => r.json()).catch(() => ({})),
   ]);
-  INDEX = i; SPRITES = s; BGM = b; FACES = f;
+  INDEX = i; SPRITES = s; BGM = b; FACES = f; EXTRA = x;
   for(const k in m) METRICS[k.toLowerCase()] = m[k];
   $('tocSub').textContent = 'ja_JP · ' + INDEX.generated + ' · ' + INDEX.groups.reduce((n, g) => n + g.eps.length, 0) + ' 話';
 }
@@ -48,6 +49,7 @@ function nextEp(id){ const a = allEps(); const k = a.findIndex(e => e.id === id)
 function rawUrl(path){ return 'https://' + SRC.img + path.split('/').map(encodeURIComponent).join('/'); }
 function proxied(path, q){ return SRC.proxy + encodeURIComponent(SRC.img + path) + q + '&output=webp&q=80&il'; }
 function urlsFor(kind, path){
+  if(path.startsWith('~/')){ const b = (settings.bgmBase || '').replace(/\/?$/, '/'); return b ? [b + path.slice(2)] : []; }   // self-hosted asset
   const q = kind === 'sprite' ? '&h=720' : '&w=1000';
   const list = [];
   if(settings.proxy && !path.includes('#')) list.push(proxied(path, q));   // wsrv.nl cannot fetch paths with '#'
@@ -56,8 +58,12 @@ function urlsFor(kind, path){
 }
 function spriteCandidates(name){
   const n = String(name).trim().toLowerCase();
-  const hit = SPRITES[n]; if(hit) return ['characters/' + hit + '.png'];
+  const hit = SPRITES[n]; if(hit) return [hit.startsWith('~/') ? hit : 'characters/' + hit + '.png'];
   const base = n.split('#')[0].split('$')[0];
+  // bodies the public mirror lacks: extracted by the user, served from their own storage (default face only)
+  const bm = /\$(\d+)/.exec(n); const body = base + '$' + (bm ? bm[1] : '1');
+  if(EXTRA[body]) return ['~/' + EXTRA[body]];
+  if(EXTRA[base + '$1']) return ['~/' + EXTRA[base + '$1']];
   const out = [`characters/${base}/${n}.png`, `characters/${n}.png`];
   let m = /^(.*)_(\d+)#0*(\d+)(\$\d+)?$/.exec(n);
   if(m) out.push(`characters/${m[1]}_${m[2]}/${m[1]}_${m[3]}.png`, `characters/${m[1]}_${m[3]}.png`);
@@ -76,13 +82,13 @@ function loadInto(img, urls){
 }
 /* sprite base id (game metrics are per base): folder name, or a flat file name without #n / $m */
 function baseOf(path){
-  path = path.replace(/^characters\//, '').replace(/\.png$/i, '');
+  path = path.replace(/^~\/sprites\//, '').replace(/^characters\//, '').replace(/\.(png|webp)$/i, '');
   const i = path.lastIndexOf('/');
   return (i >= 0 ? path.slice(0, i) : path.replace(/[#$]\d+/g, '')).toLowerCase();
 }
 /* sprite set key: same body, different expressions share one face record */
 function setKey(path){
-  path = path.replace(/^characters\//, '').replace(/\.png$/i, '');
+  path = path.replace(/^~\/sprites\//, '').replace(/^characters\//, '').replace(/\.(png|webp)$/i, '');
   const i = path.lastIndexOf('/'); const d = i >= 0 ? path.slice(0, i) : ''; let f = i >= 0 ? path.slice(i + 1) : path;
   if(f.includes('#')) f = f.replace(/#\d+/, ''); else if(f.includes('$')) { /* body file */ } else if(d) f = d;
   return d ? d + '/' + f : f;

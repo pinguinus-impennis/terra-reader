@@ -72,6 +72,18 @@ def main():
     for n in sorted(names):
         for c in cands(n):
             if c in low: mp[n.lower()] = low[c][len('characters/'):-4]; break
+    # bodies extracted by tools/sprites/build_missing_sprites.py live in the user's own storage ('~/' prefix)
+    extra_path = os.path.join(os.path.dirname(ROOT), '_cache', 'sprites', 'sprites_extra.json')
+    if os.path.exists(extra_path):
+        extra = json.load(open(extra_path, encoding='utf-8'))      # '<base>$m' -> 'sprites/<base>$m.webp'
+        added = 0
+        for n in sorted(names):
+            k = n.strip().lower()
+            if k in mp: continue
+            base = re.sub(r'[#$]\d+', '', k); m = re.search(r'\$(\d+)', k); body = f"{base}${m.group(1) if m else '1'}"
+            if body in extra: mp[k] = '~/' + extra[body]; added += 1
+            elif base + '$1' in extra: mp[k] = '~/' + extra[base + '$1']; added += 1
+        print('self-hosted sprite bodies attached:', added)
     json.dump(mp, open(os.path.join(OUT, 'sprites.json'), 'w', encoding='utf-8'), separators=(',', ':'))
     print('sprites.json', len(mp), '/', len(names), 'resolved')
 
