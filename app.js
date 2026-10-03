@@ -101,7 +101,7 @@ function preload(urls){ const u = urls[0]; if(preloadCache.has(u)) return; const
    followed by a seamless loop; switching tracks crossfades. Nothing plays unless enabled. */
 const music = (() => {
   let files = null, filesBase = '';            // bgm_files.json: clip stem -> relative path
-  let cur = null, curKey = null, fading = [], pendingKey = null, unlocked = false;
+  let cur = null, curKey = null, fading = [], pendingKey = null, unlocked = false, muted = false, last = null;
   const base = () => (settings.bgmBase || '').replace(/\/?$/, '/');
   async function loadIndex(){
     if(files && filesBase === base()) return files;
@@ -119,7 +119,8 @@ const music = (() => {
     requestAnimationFrame(step);
   }
   async function play(stem, key){
-    if(!settings.bgm || !settings.bgmBase || !stem) return;
+    last = stem ? { stem, key } : null;
+    if(!settings.bgm || !settings.bgmBase || !stem || muted) return;
     const k = String(key || '').replace(/^\$/, '');
     const track = stem.replace(/_(loop|intro)$/, '');
     if(track === curKey && cur && !cur.paused) return;
@@ -137,10 +138,17 @@ const music = (() => {
     try{ await a.play(); unlocked = true; pendingKey = null; fadeIn(a, 900); }
     catch(e){ /* autoplay blocked until the first tap: retried in unlock() */ }
   }
-  function stop(){ curKey = null; pendingKey = null; if(cur){ fadeOut(cur, 900); cur = null; } }
+  function stop(){ curKey = null; pendingKey = null; last = null; if(cur){ fadeOut(cur, 900); cur = null; } }
+  function toggleMute(){
+    muted = !muted;
+    if(muted){ curKey = null; pendingKey = null; if(cur){ fadeOut(cur, 500); cur = null; } }
+    else if(last) play(last.stem, last.key);
+    el.bgm.classList.toggle('off', muted);
+    return muted;
+  }
   function unlock(){ if(pendingKey && cur && cur.paused){ cur.play().then(() => { unlocked = true; pendingKey = null; fadeIn(cur, 900); }).catch(() => {}); } }
   function setVolume(v){ settings.bgmVol = v; if(cur) cur.volume = v; }
-  return { play, stop, unlock, setVolume, get playing(){ return !!(cur && !cur.paused); } };
+  return { play, stop, unlock, setVolume, toggleMute, get muted(){ return muted; }, get playing(){ return !!(cur && !cur.paused); } };
 })();
 
 /* ---------------- routing ---------------- */
@@ -335,7 +343,7 @@ function setBgm(key){
   if(key === null || key === undefined){ el.bgm.hidden = true; music.stop(); return; }
   const k = String(key).replace(/^\$/, '');
   const rec = BGM[k]; const short = Array.isArray(rec) ? rec[0] : (rec || k.replace(/^(m_dia_|m_sys_|m_bat_)/, '').replace(/_(loop|intro)$/, ''));
-  el.bgm.hidden = false; el.bgm.textContent = '♪ ' + short;
+  el.bgm.hidden = false; el.bgm.textContent = '♪ ' + short; el.bgm.classList.toggle('live', !!(settings.bgm && settings.bgmBase)); el.bgm.classList.toggle('off', music.muted);
   music.play(Array.isArray(rec) ? rec[1] : null, k);
 }
 function applyVisuals(st){
@@ -526,6 +534,7 @@ el.stage.addEventListener('pointerup', e => {
   bar.addEventListener('pointerup', end); bar.addEventListener('pointercancel', end);
 })();
 el.btnAuto.addEventListener('click', () => player.setAuto(!player.auto));
+el.bgm.addEventListener('click', e => { e.stopPropagation(); if(!settings.bgm || !settings.bgmBase) return; music.toggleMute(); });
 el.btnPeek.addEventListener('click', () => setPeek(!el.stage.classList.contains('peek')));
 el.btnBack.addEventListener('click', () => { location.hash = player.ep ? '#/g/' + encodeURIComponent(player.ep.g.id) : ''; });
 document.addEventListener('keydown', e => {
