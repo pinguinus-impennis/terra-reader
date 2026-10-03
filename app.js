@@ -230,7 +230,7 @@ const el = {};
 ['stage','visual','bgA','bgB','spL','spM','spR','still','stillImg','bgm','code','feed','cur','fill','knob','reach','rail','btnAuto','btnPeek','btnBack','loading'].forEach(id => el[id] = $(id));
 
 const player = {
-  ep: null, steps: [], total: 0, i: -1, maxI: -1, chosen: null, branch: null, auto: false,
+  ep: null, steps: [], total: 0, i: -1, maxI: -1, chosen: null, branch: null, auto: false, scrollP: 0, visualH: 0,
   typing: null, finishTyping: null, autoTimer: null, instant: false, current: null, waiting: false, done: false, bgSlot: 0, token: 0,
   stop(){ this.stopTyping(); this.setAuto(false); this.token++; },
   stopTyping(){ if(this.typing){ clearTimeout(this.typing); this.typing = null; this.finishTyping = null; } clearTimeout(this.autoTimer); },
@@ -242,8 +242,10 @@ function layout(){
   const seam = 72;
   el.stage.classList.toggle('band', !!settings.band);
   const W = el.stage.clientWidth;
-  let h = (settings.band || el.stage.classList.contains('hasStill')) ? W * 9 / 16 + seam : W * 3 / 4 + seam * 0.6;   // picture area: 4:3 of the width
-  if(el.stage.classList.contains('readback')) h = Math.min(h, Math.max(120, el.stage.clientHeight * 0.25));            // reading back: text takes ~3/4
+  const normalH = (settings.band || el.stage.classList.contains('hasStill')) ? W * 9 / 16 + seam : W * 3 / 4 + seam * 0.6;   // picture area: 4:3 of the width
+  const minH = Math.min(normalH, Math.max(120, el.stage.clientHeight * 0.25));                                             // reading back: text takes ~3/4
+  const h = normalH - (normalH - minH) * (player.scrollP || 0);
+  player.visualH = h;
   el.visual.style.height = Math.round(h) + 'px';
   // newest line rests a little above the middle of the text panel
   const panelH = el.stage.clientHeight - h + seam - 22;
@@ -298,7 +300,7 @@ function placeSprites(){
   const st = player.charState; if(!st) return;
   const c = st.chars, focus = st.focus;
   const shown = ['l','m','r'].filter(k => c[k]); const n = shown.length; if(!n) return;
-  const W = el.stage.clientWidth, VH = el.visual.clientHeight, u = W / 400;
+  const W = el.stage.clientWidth, VH = player.visualH || el.visual.clientHeight, u = W / 400;
   const loaded = shown.filter(k => el['sp' + k.toUpperCase()].classList.contains('on'));
   const front = n === 3 ? ((focus && loaded.includes(focus)) ? focus : (loaded.includes('m') ? 'm' : (loaded[0] || 'm'))) : null;
   const xs = n === 1 ? [.5] : n === 2 ? [.23, .77] : [.15, .5, .85];
@@ -372,13 +374,18 @@ function seek(){
 /* ---- feed ---- */
 function clean(t){ return (t || '').replace(/\{@nickname\}/gi, settings.doc).replace(/\{@[^}]+\}/g, ''); }
 function scrollEnd(){ el.feed.scrollTop = el.feed.scrollHeight; setReadback(false); }
-let lastScroll = 0;
-function setReadback(on){ if(el.stage.classList.contains('readback') === on) return; el.stage.classList.toggle('readback', on); layout(); }
+function backToLatest(){ el.feed.scrollTo({ top: el.feed.scrollHeight, behavior: REDUCED ? 'auto' : 'smooth' }); }
+let scrollIdle = null;
+function setReadback(on){ if(el.stage.classList.contains('readback') === on) return; el.stage.classList.toggle('readback', on); if(!on){ player.scrollP = 0; layout(); } }
 el.feed.addEventListener('scroll', () => {
   const f = el.feed, gap = f.scrollHeight - f.scrollTop - f.clientHeight;
-  if(gap < 40) setReadback(false);
-  else if(f.scrollTop < lastScroll - 2) setReadback(true);
-  lastScroll = f.scrollTop;
+  const p = Math.max(0, Math.min(1, (gap - 40) / 260));          // 40px of slack, then the picture folds over the next 260px
+  if(p !== player.scrollP){
+    el.stage.classList.add('scrolling');                         // height follows the finger: no transition while scrolling
+    player.scrollP = p; layout();
+    clearTimeout(scrollIdle); scrollIdle = setTimeout(() => el.stage.classList.remove('scrolling'), 160);
+  }
+  if(gap < 40) setReadback(false); else setReadback(true);
 }, { passive: true });
 function markPast(){ if(player.current){ player.current.classList.add('past'); player.current = null; } }
 function addLine(st, instant){
@@ -437,6 +444,7 @@ function visible(st){
   return !(player.branch && player.chosen !== null && !player.branch.includes(player.chosen));
 }
 function next(){
+  if(el.stage.classList.contains('readback')){ backToLatest(); return; }
   if(player.waiting || player.done || el.stage.classList.contains('peek') || !player.steps.length) return;
   if(player.typing){ player.finishTyping(); return; }
   clearTimeout(player.autoTimer);

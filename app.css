@@ -109,6 +109,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sys);outline-of
 .ln.sys .t{font-family:var(--ui);font-size:12.5px;color:var(--mute);border-left:2px dashed var(--winline);padding-left:12px}
 .ln.past{opacity:.55}
 .stage.readback .ln.past{opacity:1}   /* reading back: every line at full strength */
+.stage.readback .cur{opacity:0!important}
+.stage.scrolling .visual{transition:none}
 .ln.pick .t{font-family:var(--ui);font-size:13.5px;color:var(--sys)}
 .ln.end{text-align:center;font-size:11px;letter-spacing:.24em;color:var(--mute);padding:18px 0 6px}
 .ln.end b{display:block;font-size:14px;letter-spacing:.14em;color:var(--ink);margin:6px 0 16px}
