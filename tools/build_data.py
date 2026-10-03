@@ -76,11 +76,12 @@ def main():
     print('sprites.json', len(mp), '/', len(names), 'resolved')
 
     # ---- bgm.json
-    bgm = {}
+    bgm = {}   # variable key -> [display name, clip file stem]
     for k, v in sv.items():
         if isinstance(v, str) and '/Music/' in v:
-            short = re.sub(r'^(m_dia_|m_sys_|m_bat_|m_avg_)', '', v.split('/')[-1]); short = re.sub(r'_(loop|intro)$', '', short)
-            bgm[k] = short
+            stem = v.split('/')[-1].lower()
+            short = re.sub(r'^(m_dia_|m_sys_|m_bat_|m_avg_)', '', stem); short = re.sub(r'_(loop|intro)$', '', short)
+            bgm[k] = [short, stem]
     json.dump(bgm, open(os.path.join(OUT, 'bgm.json'), 'w', encoding='utf-8'), separators=(',', ':'))
     print('bgm.json', len(bgm))
 

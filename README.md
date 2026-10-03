@@ -29,6 +29,14 @@
 
 新章・新イベントが追加されたら `data/` を作り直します。`tools/build_data.py` で目次・立ち絵表・BGM 表、続けて `tools/analyze_faces.py` で顔位置表（OpenCV が必要。解析済みの体は再利用されるので追加分だけ処理します）。本文と画像は常に最新の取得元を参照するため、更新作業は目次だけです。
 
+## BGM
+
+BGM は再配布せず、自分で抽出して自分の置き場（Cloudflare R2）から鳴らします。
+
+1. `python tools/bgm/build_bgm.py` … 公式配信サーバーから音楽バンドルを取得し、`_cache/bgm/opus/` に opus を作る（.NET 6 ランタイム、ArknightsStudioCLI、vgmstream、ffmpeg が必要。手順はスクリプト冒頭）
+2. `python tools/bgm/upload_r2.py` … R2 バケットの秘密プレフィックス配下へアップロード（鍵は `_cache/bgm/r2.env`、リポジトリには入れない）
+3. アプリの設定で「BGM を再生する」をオンにし、「BGM 音源の URL」に公開ドメイン付きの URL を入れる
+
 ## ローカルで動かす
 
 ```

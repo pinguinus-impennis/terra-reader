@@ -145,6 +145,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sys);outline-of
 .sheet label.row{flex-direction:row;align-items:center;gap:10px}
 .sheet input[type=text]{font:inherit;font-size:15px;color:var(--ink);background:var(--panel);border:1px solid var(--winline);border-radius:8px;padding:9px 12px}
 .sheet input[type=checkbox]{width:18px;height:18px;accent-color:var(--name)}
+.sheet input[type=url]{font:inherit;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--winline);border-radius:8px;padding:9px 12px;font-family:var(--mono)}
+.sheet input[type=range]{accent-color:var(--name);width:100%}
 .seg{display:flex;gap:6px}
 .seg button{flex:1;padding:8px;border-radius:8px;border:1px solid var(--winline);color:var(--ink2);font-size:13px}
 .seg button.on{background:var(--ink);color:var(--stage);border-color:var(--ink);font-weight:700}

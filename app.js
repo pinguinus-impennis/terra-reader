@@ -17,7 +17,7 @@ const store = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
   del(k){ try{ localStorage.removeItem(k); }catch(e){} },
 };
-const settings = Object.assign({ doc: 'ドクター', font: 16, proxy: true, sys: false, faces: true, band: false }, store.get('tr:settings', {}));
+const settings = Object.assign({ doc: 'ドクター', font: 16, proxy: true, sys: false, faces: true, band: false, bgm: false, bgmBase: '', bgmVol: 0.5 }, store.get('tr:settings', {}));
 function saveSettings(){ store.set('tr:settings', settings); applySettings(); }
 function applySettings(){ document.documentElement.style.setProperty('--fs', settings.font + 'px'); }
 const progress = {
@@ -90,6 +90,50 @@ function setKey(path){
 const preloadCache = new Map();
 function preload(urls){ const u = urls[0]; if(preloadCache.has(u)) return; const im = new Image(); preloadCache.set(u, im); loadInto(im, urls); }
 
+/* ---------------- music ----------------
+   Plays the game's BGM from the user's own storage (settings.bgmBase). A track is an intro clip
+   followed by a seamless loop; switching tracks crossfades. Nothing plays unless enabled. */
+const music = (() => {
+  let files = null, filesBase = '';            // bgm_files.json: clip stem -> relative path
+  let cur = null, curKey = null, fading = [], pendingKey = null, unlocked = false;
+  const base = () => (settings.bgmBase || '').replace(/\/?$/, '/');
+  async function loadIndex(){
+    if(files && filesBase === base()) return files;
+    try{ const r = await fetch(base() + 'bgm_files.json'); files = r.ok ? await r.json() : {}; }catch(e){ files = {}; }
+    filesBase = base(); return files;
+  }
+  function fadeOut(a, ms){
+    if(!a) return; fading.push(a); const v0 = a.volume, t0 = performance.now();
+    const step = () => { const t = Math.min(1, (performance.now() - t0) / ms); a.volume = v0 * (1 - t); if(t < 1 && fading.includes(a)) requestAnimationFrame(step); else { a.pause(); a.src = ''; fading = fading.filter(x => x !== a); } };
+    requestAnimationFrame(step);
+  }
+  function fadeIn(a, ms){
+    const v1 = settings.bgmVol, t0 = performance.now(); a.volume = 0;
+    const step = () => { if(cur !== a) return; const t = Math.min(1, (performance.now() - t0) / ms); a.volume = v1 * t; if(t < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  async function play(stem){
+    if(!settings.bgm || !settings.bgmBase || !stem) return;
+    const key = stem.replace(/_(loop|intro)$/, '');
+    if(key === curKey && cur && !cur.paused) return;
+    const idx = await loadIndex();
+    const loopRel = idx[key + '_loop'] || idx[stem] || idx[key], introRel = idx[key + '_intro'];
+    if(!loopRel){ return; }
+    curKey = key; pendingKey = key;
+    const old = cur; if(old) fadeOut(old, 1200);
+    const a = new Audio(); a.preload = 'auto'; cur = a;
+    const startLoop = () => { if(cur !== a) return; a.src = base() + loopRel; a.loop = true; a.currentTime = 0; a.play().catch(() => {}); };
+    if(introRel){ a.src = base() + introRel; a.loop = false; a.addEventListener('ended', startLoop, { once: true }); }
+    else { a.src = base() + loopRel; a.loop = true; }
+    try{ await a.play(); unlocked = true; pendingKey = null; fadeIn(a, 900); }
+    catch(e){ /* autoplay blocked until the first tap: retried in unlock() */ }
+  }
+  function stop(){ curKey = null; pendingKey = null; if(cur){ fadeOut(cur, 900); cur = null; } }
+  function unlock(){ if(pendingKey && cur && cur.paused){ cur.play().then(() => { unlocked = true; pendingKey = null; fadeIn(cur, 900); }).catch(() => {}); } }
+  function setVolume(v){ settings.bgmVol = v; if(cur) cur.volume = v; }
+  return { play, stop, unlock, setVolume, get playing(){ return !!(cur && !cur.paused); } };
+})();
+
 /* ---------------- routing ---------------- */
 function route(){
   const h = location.hash;
@@ -104,7 +148,7 @@ addEventListener('hashchange', route);
    ===================================================================== */
 const toc = { tab: store.get('tr:tab', 'main'), open: new Set(store.get('tr:open', [])), q: '' };
 function showToc(openId){
-  player.stop();
+  player.stop(); music.stop();
   document.body.classList.remove('playing');
   $('stage').hidden = true; $('toc').hidden = false;
   if(openId){ const g = INDEX.groups.find(g => g.id === openId); if(g){ toc.tab = g.kind === 'mini' ? 'event' : g.kind; toc.open.add(openId); } }
@@ -279,9 +323,11 @@ function placeSprites(){
   });
 }
 function setBgm(key){
-  if(key === null || key === undefined){ el.bgm.hidden = true; return; }
+  if(key === null || key === undefined){ el.bgm.hidden = true; music.stop(); return; }
   const k = String(key).replace(/^\$/, '');
-  el.bgm.hidden = false; el.bgm.textContent = '♪ ' + (BGM[k] || k.replace(/^(m_dia_|m_sys_|m_bat_)/, '').replace(/_(loop|intro)$/, ''));
+  const rec = BGM[k]; const short = Array.isArray(rec) ? rec[0] : (rec || k.replace(/^(m_dia_|m_sys_|m_bat_)/, '').replace(/_(loop|intro)$/, ''));
+  el.bgm.hidden = false; el.bgm.textContent = '♪ ' + short;
+  music.play(Array.isArray(rec) ? rec[1] : null);
 }
 function applyVisuals(st){
   if('bg' in st) setBg(st.bg);
@@ -455,6 +501,7 @@ let pd = null;
 el.stage.addEventListener('pointerdown', e => { pd = { x: e.clientX, y: e.clientY, btn: !!(e.target.closest('button') || e.target.closest('.seek')) }; });
 el.stage.addEventListener('pointerup', e => {
   if(!pd) return; const moved = Math.hypot(e.clientX - pd.x, e.clientY - pd.y); const wasBtn = pd.btn; pd = null;
+  music.unlock();
   if(wasBtn || moved > 8) return;
   if(el.stage.classList.contains('peek')){ setPeek(false); return; }
   next();
@@ -482,12 +529,12 @@ document.addEventListener('keydown', e => {
    SETTINGS SHEET
    ===================================================================== */
 function openSettings(){
-  $('setDoc').value = settings.doc; $('setProxy').checked = !!settings.proxy; $('setSys').checked = !!settings.sys; $('setFaces').checked = !!settings.faces; $('setBand').checked = !!settings.band;
+  $('setDoc').value = settings.doc; $('setProxy').checked = !!settings.proxy; $('setSys').checked = !!settings.sys; $('setFaces').checked = !!settings.faces; $('setBand').checked = !!settings.band; $('setBgm').checked = !!settings.bgm; $('setBgmBase').value = settings.bgmBase || ''; $('setBgmVol').value = String(settings.bgmVol);
   document.querySelectorAll('#setFont button').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === Number(settings.font)));
   $('settings').hidden = false;
 }
 function closeSettings(){
-  settings.doc = $('setDoc').value.trim() || 'ドクター'; settings.proxy = $('setProxy').checked; settings.sys = $('setSys').checked; settings.faces = $('setFaces').checked; settings.band = $('setBand').checked;
+  settings.doc = $('setDoc').value.trim() || 'ドクター'; settings.proxy = $('setProxy').checked; settings.sys = $('setSys').checked; settings.faces = $('setFaces').checked; settings.band = $('setBand').checked; settings.bgm = $('setBgm').checked; settings.bgmBase = $('setBgmBase').value.trim(); settings.bgmVol = Number($('setBgmVol').value) || 0.5; if(!settings.bgm) music.stop(); else music.setVolume(settings.bgmVol);
   saveSettings(); $('settings').hidden = true; if(!$('toc').hidden) renderToc(); layout(); placeSprites();
 }
 $('btnSettings').addEventListener('click', openSettings);
@@ -495,6 +542,8 @@ $('btnCloseSettings').addEventListener('click', closeSettings);
 $('settings').addEventListener('click', e => { if(e.target === $('settings')) closeSettings(); });
 $('setFont').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; settings.font = Number(b.dataset.v); document.querySelectorAll('#setFont button').forEach(x => x.classList.toggle('on', x === b)); applySettings(); });
 $('btnResetProgress').addEventListener('click', () => { if(confirm('既読位置と読了マークをすべて消します。よろしいですか？')){ progress.clearAll(); renderToc(); } });
+
+window.TR = { music, settings, player };   // debug hook (console / tests)
 
 /* ---------------- boot ---------------- */
 applySettings();
