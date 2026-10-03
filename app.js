@@ -242,7 +242,8 @@ function layout(){
   const seam = 72;
   el.stage.classList.toggle('band', !!settings.band);
   const W = el.stage.clientWidth;
-  const h = (settings.band || el.stage.classList.contains('hasStill')) ? W * 9 / 16 + seam : W * 3 / 4 + seam * 0.6;   // picture area: 4:3 of the width
+  let h = (settings.band || el.stage.classList.contains('hasStill')) ? W * 9 / 16 + seam : W * 3 / 4 + seam * 0.6;   // picture area: 4:3 of the width
+  if(el.stage.classList.contains('readback')) h = Math.min(h, Math.max(120, el.stage.clientHeight * 0.25));            // reading back: text takes ~3/4
   el.visual.style.height = Math.round(h) + 'px';
   // newest line rests a little above the middle of the text panel
   const panelH = el.stage.clientHeight - h + seam - 22;
@@ -370,7 +371,15 @@ function seek(){
 
 /* ---- feed ---- */
 function clean(t){ return (t || '').replace(/\{@nickname\}/gi, settings.doc).replace(/\{@[^}]+\}/g, ''); }
-function scrollEnd(){ el.feed.scrollTop = el.feed.scrollHeight; }
+function scrollEnd(){ el.feed.scrollTop = el.feed.scrollHeight; setReadback(false); }
+let lastScroll = 0;
+function setReadback(on){ if(el.stage.classList.contains('readback') === on) return; el.stage.classList.toggle('readback', on); layout(); }
+el.feed.addEventListener('scroll', () => {
+  const f = el.feed, gap = f.scrollHeight - f.scrollTop - f.clientHeight;
+  if(gap < 40) setReadback(false);
+  else if(f.scrollTop < lastScroll - 2) setReadback(true);
+  lastScroll = f.scrollTop;
+}, { passive: true });
 function markPast(){ if(player.current){ player.current.classList.add('past'); player.current = null; } }
 function addLine(st, instant){
   markPast();
