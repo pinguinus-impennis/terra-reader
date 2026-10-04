@@ -66,7 +66,10 @@ def main():
         if m: out += [f'characters/{m.group(1)}_{m.group(2)}/{m.group(1)}_{m.group(3)}.png', f'characters/{m.group(1)}_{m.group(3)}.png']
         m = re.match(r'^(.*)#0*(\d+)(\$\d+)?$', n)
         if m: out += [f'characters/{m.group(1)}/{m.group(1)}_{m.group(2)}.png', f'characters/{m.group(1)}_{m.group(2)}.png', f'characters/{m.group(1)}/{m.group(1)}#{m.group(2)}$1.png']
-        if '#' not in n: out += [f'characters/{n}_1/{n}_1.png', f'characters/{n}/{n}_1.png', f'characters/{n}/{n}#1$1.png', f'characters/{n}_1/{n}_1#1$1.png']
+        if '#' not in n:
+            ms = re.match(r'^(.*)_(\d+)$', n)                  # bare legacy set name X_s means expression 1 of set s
+            if ms: out.insert(0, f'characters/{n}/{ms.group(1)}_1.png')
+            out += [f'characters/{n}_1/{n}_1.png', f'characters/{n}/{n}_1.png', f'characters/{n}/{n}#1$1.png', f'characters/{n}_1/{n}_1#1$1.png']
         return out
     mp = {}
     for n in sorted(names):

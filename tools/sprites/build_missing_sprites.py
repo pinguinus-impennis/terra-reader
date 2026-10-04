@@ -77,6 +77,11 @@ def main():
         stem = f[:-4]; out = os.path.join(d_webp, stem + '.webp')
         if not os.path.exists(out):
             im = Image.open(os.path.join(d_png, f)).convert('RGBA')
+            alpha = os.path.join(d_png, stem + '[alpha].png')          # some bodies keep their alpha in a sister texture
+            if os.path.exists(alpha):
+                a = Image.open(alpha).convert('L')
+                if a.size != im.size: a = a.resize(im.size, Image.LANCZOS)
+                im.putalpha(a)
             if im.height > 1400: im = im.resize((round(im.width * 1400 / im.height), 1400), Image.LANCZOS)
             im.save(out, 'WEBP', quality=86, method=6)
         return stem
