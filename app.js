@@ -500,8 +500,11 @@ function gotoIndex(target, chosen){
     if(!visible(st)){ if(st.kind === 'sys') applyVisuals(st); continue; }
     applyVisuals(st);
     if(st.kind === 'decision'){
-      if(chosen !== null && chosen !== undefined){ const k = st.values.indexOf(chosen); if(k >= 0) addPick(clean(st.decision[k])); }
-      else { player.i -= 1; player.instant = false; showChoice(st); return; }
+      if(player.i === target){ player.i -= 1; player.instant = false; showChoice(st); return; }   // the target itself is a choice: ask
+      // an earlier choice on the way: use the remembered answer, otherwise the first option
+      let k = (chosen !== null && chosen !== undefined) ? st.values.indexOf(chosen) : -1;
+      if(k < 0){ k = 0; player.chosen = st.values[0]; }
+      addPick(clean(st.decision[k]));
     } else addLine(st, true);
   }
   player.instant = false; seek(); preloadAhead(player.i);
