@@ -373,7 +373,14 @@ function seek(){
 
 /* ---- feed ---- */
 function clean(t){ return (t || '').replace(/\{@nickname\}/gi, settings.doc).replace(/\{@[^}]+\}/g, ''); }
-function scrollEnd(){ el.feed.scrollTop = el.feed.scrollHeight; setReadback(false); }
+function scrollEnd(){
+  // a short newest line rests above the bottom pad; a tall one is anchored by its top so nothing is cut off under the seam
+  const f = el.feed, ln = player.current;
+  const pad = parseFloat(getComputedStyle(f).paddingBottom) || 0;
+  if(ln && ln.offsetHeight + 12 > f.clientHeight - pad) f.scrollTop = Math.max(0, ln.offsetTop - 12);
+  else f.scrollTop = f.scrollHeight;
+  setReadback(false);
+}
 function backToLatest(){ el.feed.scrollTo({ top: el.feed.scrollHeight, behavior: REDUCED ? 'auto' : 'smooth' }); }
 let scrollIdle = null;
 function setReadback(on){ if(el.stage.classList.contains('readback') === on) return; el.stage.classList.toggle('readback', on); if(!on){ player.scrollP = 0; layout(); } }
