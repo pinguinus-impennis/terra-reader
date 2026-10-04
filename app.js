@@ -27,7 +27,7 @@ const progress = {
 };
 
 /* ---------------- data ---------------- */
-let INDEX = null, SPRITES = {}, BGM = {}, FACES = {}, METRICS = {}, EXTRA = {};
+let INDEX = null, SPRITES = {}, BGM = {}, FACES = {}, METRICS = {}, EXTRA = {}, BASEMAP = {};
 async function loadData(){
   const [i, s, b, f, m, x] = await Promise.all([
     fetch('data/index.json').then(r => r.json()),
@@ -38,6 +38,7 @@ async function loadData(){
     fetch('data/sprites_extra.json').then(r => r.json()).catch(() => ({})),
   ]);
   INDEX = i; SPRITES = s; BGM = b; FACES = f; EXTRA = x;
+  for(const k in SPRITES){ const bk = k.split('#')[0].split('$')[0]; if(!(bk in BASEMAP) || k === bk) BASEMAP[bk] = SPRITES[k]; }   // base id -> some resolvable image
   for(const k in m) METRICS[k.toLowerCase()] = m[k];
   $('tocSub').textContent = 'ja_JP · ' + INDEX.generated + ' · ' + INDEX.groups.reduce((n, g) => n + g.eps.length, 0) + ' 話';
 }
@@ -64,6 +65,8 @@ function spriteCandidates(name){
   const bm = /\$(\d+)/.exec(n); const body = base + '$' + (bm ? bm[1] : '1');
   if(EXTRA[body]) return ['~/' + EXTRA[body]];
   if(EXTRA[base + '$1']) return ['~/' + EXTRA[base + '$1']];
+  // an expression file that is missing: show the character's default look rather than nothing
+  if(n !== base && BASEMAP[base]){ const hb = BASEMAP[base]; return [hb.startsWith('~/') ? hb : 'characters/' + hb + '.png']; }
   const out = [`characters/${base}/${n}.png`, `characters/${n}.png`];
   let m = /^(.*)_(\d+)#0*(\d+)(\$\d+)?$/.exec(n);
   if(m) out.push(`characters/${m[1]}_${m[2]}/${m[1]}_${m[3]}.png`, `characters/${m[1]}_${m[3]}.png`);
@@ -456,7 +459,10 @@ function next(){
   if(player.typing){ player.finishTyping(); return; }
   clearTimeout(player.autoTimer);
   let st;
-  do { player.i += 1; st = player.steps[player.i]; if(!st) return finished(); } while(!visible(st));
+  do {
+    player.i += 1; st = player.steps[player.i]; if(!st) return finished();
+    if(!visible(st) && st.kind === 'sys') applyVisuals(st);      // hidden tutorial text: keep its scene changes
+  } while(!visible(st));
   applyVisuals(st); seek(); preloadAhead(player.i);
   if(st.kind === 'decision') showChoice(st); else addLine(st);
   player.maxI = Math.max(player.maxI, player.i);
@@ -491,7 +497,7 @@ function gotoIndex(target, chosen){
   resetView(); player.chosen = chosen; player.instant = true;
   while(player.i < target){
     player.i += 1; const st = player.steps[player.i]; if(!st) break;
-    if(!visible(st)) continue;
+    if(!visible(st)){ if(st.kind === 'sys') applyVisuals(st); continue; }
     applyVisuals(st);
     if(st.kind === 'decision'){
       if(chosen !== null && chosen !== undefined){ const k = st.values.indexOf(chosen); if(k >= 0) addPick(clean(st.decision[k])); }

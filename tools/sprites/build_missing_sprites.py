@@ -26,7 +26,7 @@ def base_of(path):
     d, _, f = path.rpartition('/'); return (d or re.sub(r'[#$]\d+', '', f)).lower()
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument('--work', default=os.environ.get('SPRITE_WORK', DEFAULT_WORK)); ap.add_argument('--jobs', type=int, default=6); ap.add_argument('--only', default='')
+    ap = argparse.ArgumentParser(); ap.add_argument('--work', default=os.environ.get('SPRITE_WORK', DEFAULT_WORK)); ap.add_argument('--jobs', type=int, default=6); ap.add_argument('--only', default=''); ap.add_argument('--bases', default='', help='text file of extra base ids to extract')
     a = ap.parse_args(); work = a.work
     dotnet = os.environ.get('DOTNET', os.path.expanduser('~/.dotnet/dotnet.exe'))
     cli = os.environ.get('ARKSTUDIO_CLI', os.path.join(work, 'cli', 'ArknightsStudioCLI.dll'))
@@ -39,6 +39,8 @@ def main():
     sprites = json.load(open(os.path.join(ROOT, 'data', 'sprites.json'), encoding='utf-8'))
     have = {base_of(p) for p in sprites.values() if not p.startswith('~/')}
     missing = sorted(k.lower() for k in metrics if k.lower() not in have)
+    if a.bases and os.path.exists(a.bases):                       # extra bases (e.g. names seen in stories but absent from metrics)
+        missing = sorted(set(missing) | {l.strip().lower() for l in open(a.bases) if l.strip()} - have)
     ver = json.loads(get(CONF))['resVersion']
     hul = json.loads(get(CDN.format(ver=ver, file='hot_update_list.json'), 300))
     names = {b['name'].lower()[len('avg/characters/'):-3]: b['name'] for b in hul['abInfos'] if b['name'].lower().startswith('avg/characters/')}
@@ -71,13 +73,19 @@ def main():
     extra = {}
     pngs = [f for f in os.listdir(d_png) if f.lower().endswith('.png')]
     # keep only body textures  <base>$m.png  (skip face patches and alpha/other textures)
-    bodies = [f for f in pngs if re.match(r'^[a-z0-9_]+\$\d+\.png$', f, re.I)]
+    wanted = set(missing)
+    def legacy_key(f):   # legacy bodies: <base>.png / <base>_1.png / <base>_1#1.png  -> treated as <base>$1
+        stem = re.sub(r'_#\d+$', '', f[:-4]).lower()                    # drop the exporter's duplicate suffix
+        if stem.endswith('[alpha]'): return None
+        b = re.sub(r'(_1)?(#1)?$', '', stem)
+        return b if b in wanted and not re.match(r'^[a-z0-9_]+\$\d+$', stem) else None
+    bodies = [f for f in pngs if re.match(r'^[a-z0-9_]+\$\d+\.png$', f, re.I) or legacy_key(f)]
     print('textures', len(pngs), '| body textures', len(bodies))
     def conv(f):
-        stem = f[:-4]; out = os.path.join(d_webp, stem + '.webp')
+        lk = legacy_key(f); stem = (lk + '$1') if lk else f[:-4]; out = os.path.join(d_webp, stem + '.webp')
         if not os.path.exists(out):
             im = Image.open(os.path.join(d_png, f)).convert('RGBA')
-            alpha = os.path.join(d_png, stem + '[alpha].png')          # some bodies keep their alpha in a sister texture
+            alpha = os.path.join(d_png, f[:-4] + '[alpha].png')          # some bodies keep their alpha in a sister texture
             if os.path.exists(alpha):
                 a = Image.open(alpha).convert('L')
                 if a.size != im.size: a = a.resize(im.size, Image.LANCZOS)
