@@ -1,0 +1,132 @@
+{
+ "note": "イベントをストーリーライン別に並べる表。groups は index.json の group id。未記載は『未分類』に入る",
+ "lines": [
+  {
+   "name": "ロドス・カズデル",
+   "groups": [
+    "act9d0",
+    "act18d0",
+    "act33side"
+   ]
+  },
+  {
+   "name": "炎国",
+   "groups": [
+    "act6d5",
+    "act16d5",
+    "act15side",
+    "act23side",
+    "act14mini",
+    "act31side",
+    "act40side",
+    "act49side"
+   ]
+  },
+  {
+   "name": "クルビア・ライン生命",
+   "groups": [
+    "act15d0",
+    "act17d0",
+    "act19side",
+    "act20side",
+    "act25side",
+    "act32side"
+   ]
+  },
+  {
+   "name": "イベリア・エーギル",
+   "groups": [
+    "act18d3",
+    "act17side",
+    "act26side",
+    "act34side"
+   ]
+  },
+  {
+   "name": "リターニア",
+   "groups": [
+    "act11d0",
+    "act18side",
+    "act29side"
+   ]
+  },
+  {
+   "name": "カジミエーシュ",
+   "groups": [
+    "1stact",
+    "act13d5",
+    "act13side"
+   ]
+  },
+  {
+   "name": "龍門",
+   "groups": [
+    "act5d0"
+   ]
+  },
+  {
+   "name": "ウルサス",
+   "groups": [
+    "act10d5",
+    "act47side"
+   ]
+  },
+  {
+   "name": "イェラグ",
+   "groups": [
+    "act14side",
+    "act30side"
+   ]
+  },
+  {
+   "name": "ラテラーノ",
+   "groups": [
+    "act16side"
+   ]
+  },
+  {
+   "name": "サルゴン",
+   "groups": [
+    "act12d0",
+    "act9mini"
+   ]
+  },
+  {
+   "name": "シエスタ・リゾート",
+   "groups": [
+    "act3d0",
+    "act27side"
+   ]
+  },
+  {
+   "name": "ボリバル",
+   "groups": [
+    "act12side"
+   ]
+  },
+  {
+   "name": "シラクーザ",
+   "groups": [
+    "act21side"
+   ]
+  },
+  {
+   "name": "ミノス",
+   "groups": [
+    "act48side"
+   ]
+  },
+  {
+   "name": "コラボ",
+   "groups": [
+    "act24side"
+   ]
+  },
+  {
+   "name": "単発",
+   "groups": [
+    "act36side"
+   ]
+  }
+ ]
+}

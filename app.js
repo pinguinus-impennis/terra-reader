@@ -27,16 +27,18 @@ const progress = {
 };
 
 /* ---------------- data ---------------- */
-let INDEX = null, SPRITES = {}, BGM = {}, FACES = {}, METRICS = {}, EXTRA = {}, BASEMAP = {};
+let INDEX = null, SPRITES = {}, BGM = {}, FACES = {}, METRICS = {}, EXTRA = {}, BASEMAP = {}, LINES = [];
 async function loadData(){
-  const [i, s, b, f, m, x] = await Promise.all([
+  const [i, s, b, f, m, x, sl] = await Promise.all([
     fetch('data/index.json').then(r => r.json()),
     fetch('data/sprites.json').then(r => r.json()).catch(() => ({})),
     fetch('data/bgm.json').then(r => r.json()).catch(() => ({})),
     fetch('data/faces.json').then(r => r.json()).catch(() => ({})),
     fetch('data/metrics.json').then(r => r.json()).catch(() => ({})),
     fetch('data/sprites_extra.json').then(r => r.json()).catch(() => ({})),
+    fetch('data/storylines.json').then(r => r.json()).catch(() => ({ lines: [] })),
   ]);
+  LINES = (sl && sl.lines) || [];
   INDEX = i; SPRITES = s; BGM = b; FACES = f; EXTRA = x;
   for(const k in SPRITES){ const bk = k.split('#')[0].split('$')[0]; if(!(bk in BASEMAP) || k === bk) BASEMAP[bk] = SPRITES[k]; }   // base id -> some resolvable image
   for(const k in m) METRICS[k.toLowerCase()] = m[k];
@@ -44,7 +46,14 @@ async function loadData(){
 }
 const allEps = () => INDEX.groups.flatMap(g => g.eps.map(e => ({ ...e, g })));
 function findEp(id){ return allEps().find(e => e.id === id) || null; }
-function nextEp(id){ const a = allEps(); const k = a.findIndex(e => e.id === id); for(let j = k + 1; j < a.length; j++){ if(!a[j].missing) return a[j]; } return null; }
+function nextEp(id){
+  const cur = findEp(id); if(!cur) return null;
+  const pool = cur.g.kind === 'main' ? INDEX.groups.filter(g => g.kind === 'main').flatMap(g => g.eps.map(e => ({ ...e, g })))   // main story: chapter after chapter
+                                     : cur.g.eps.map(e => ({ ...e, g: cur.g }));                                                   // an event stands on its own
+  const k = pool.findIndex(e => e.id === id);
+  for(let j = k + 1; j < pool.length; j++){ if(!pool[j].missing) return pool[j]; }
+  return null;
+}
 
 /* ---------------- image URLs ---------------- */
 function rawUrl(path){ return 'https://' + SRC.img + path.split('/').map(encodeURIComponent).join('/'); }
@@ -166,7 +175,7 @@ addEventListener('hashchange', route);
 /* =====================================================================
    TOC
    ===================================================================== */
-const toc = { tab: store.get('tr:tab', 'main'), open: new Set(store.get('tr:open', [])), q: '' };
+const toc = { tab: store.get('tr:tab', 'main'), open: new Set(store.get('tr:open', [])), q: '', evOrder: store.get('tr:evOrder', 'release') };
 function showToc(openId){
   player.stop(); music.stop();
   document.body.classList.remove('playing');
@@ -188,40 +197,60 @@ function renderToc(){
   const kinds = toc.tab === 'event' ? ['event', 'mini'] : [toc.tab];
   const wrap = $('groups'); wrap.innerHTML = '';
   let shown = 0;
-  for(const g of INDEX.groups){
-    if(!kinds.includes(g.kind)) continue;
-    const eps = q ? g.eps.filter(e => (e.name + ' ' + e.code + ' ' + g.name).toLowerCase().includes(q)) : g.eps;
-    if(!eps.length) continue;
-    shown++;
-    const open = q ? true : toc.open.has(g.id) || (g.kind === 'record');
-    const card = document.createElement('section'); card.className = 'chap'; card.dataset.g = g.id;
-    const done = g.eps.filter(e => progress.get(e.id)?.done).length;
-    const h = document.createElement('button'); h.className = 'h';
-    h.innerHTML = `<span class="code"></span><span class="nm"></span><span class="cnt"><b></b>${g.eps.length} 話</span>`;
-    h.querySelector('.code').textContent = g.code || (g.kind === 'mini' ? 'MINI' : g.kind === 'event' ? 'EVENT' : '');
-    h.querySelector('.nm').textContent = g.name;
-    h.querySelector('.cnt b').textContent = done ? done + ' / ' : '';
-    h.addEventListener('click', () => { if(toc.open.has(g.id)) toc.open.delete(g.id); else toc.open.add(g.id); store.set('tr:open', [...toc.open]); renderToc(); });
-    card.appendChild(h);
-    if(open){
-      const list = document.createElement('div'); list.className = 'eps';
-      for(const e of eps){
-        const st = statusOf(e);
-        const b = document.createElement('button'); b.className = 'ep' + (st.cls === 'now' ? ' now' : '') + (e.missing ? ' miss' : '');
-        b.innerHTML = `<span class="id"></span><span class="ttl"></span><span class="tag"></span><span class="st"></span>`;
-        b.querySelector('.id').textContent = e.code || '';
-        b.querySelector('.ttl').textContent = e.name || e.code || e.id;
-        const tag = b.querySelector('.tag'); if(e.tag && g.kind !== 'record') tag.textContent = e.tag; else tag.remove();
-        const s = b.querySelector('.st'); s.textContent = st.txt; if(st.cls) s.classList.add(st.cls);
-        b.disabled = !!e.missing;
-        b.addEventListener('click', () => { location.hash = '#/r/' + encodeURIComponent(e.id); });
-        list.appendChild(b);
-      }
-      card.appendChild(list);
+  const byLine = toc.tab === 'event' && toc.evOrder === 'line';
+  // event tab: release order, or grouped by storyline
+  if(toc.tab === 'event'){
+    const sw = document.createElement('div'); sw.className = 'seg small';
+    sw.innerHTML = '<button data-o="release">リリース順</button><button data-o="line">ストーリー別</button>';
+    sw.querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.o === toc.evOrder); b.addEventListener('click', () => { toc.evOrder = b.dataset.o; store.set('tr:evOrder', toc.evOrder); renderToc(); }); });
+    wrap.appendChild(sw);
+  }
+  const groups = INDEX.groups.filter(g => kinds.includes(g.kind));
+  const sections = byLine
+    ? [...LINES.map(l => ({ name: l.name, groups: l.groups.map(id => groups.find(g => g.id === id)).filter(Boolean) })),
+       { name: '未分類', groups: groups.filter(g => !LINES.some(l => l.groups.includes(g.id))) }].filter(s => s.groups.length)
+    : [{ name: null, groups }];
+  for(const sec of sections){
+    const cards = [];
+    for(const g of sec.groups){
+      const eps = q ? g.eps.filter(e => (e.name + ' ' + e.code + ' ' + g.name).toLowerCase().includes(q)) : g.eps;
+      if(!eps.length) continue;
+      shown++;
+      cards.push(groupCard(g, eps, q ? true : toc.open.has(g.id) || (g.kind === 'record')));
     }
-    wrap.appendChild(card);
+    if(!cards.length) continue;
+    if(sec.name){ const h = document.createElement('h2'); h.className = 'lineHead'; h.textContent = sec.name; wrap.appendChild(h); }
+    cards.forEach(c => wrap.appendChild(c));
   }
   if(!shown){ const d = document.createElement('div'); d.className = 'empty'; d.textContent = '該当なし'; wrap.appendChild(d); }
+}
+function groupCard(g, eps, open){
+  const card = document.createElement('section'); card.className = 'chap'; card.dataset.g = g.id;
+  const done = g.eps.filter(e => progress.get(e.id)?.done).length;
+  const h = document.createElement('button'); h.className = 'h';
+  h.innerHTML = `<span class="code"></span><span class="nm"></span><span class="cnt"><b></b>${g.eps.length} 話</span>`;
+  h.querySelector('.code').textContent = g.code || (g.kind === 'mini' ? 'MINI' : g.kind === 'event' ? 'EVENT' : '');
+  h.querySelector('.nm').textContent = g.name;
+  h.querySelector('.cnt b').textContent = done ? done + ' / ' : '';
+  h.addEventListener('click', () => { if(toc.open.has(g.id)) toc.open.delete(g.id); else toc.open.add(g.id); store.set('tr:open', [...toc.open]); renderToc(); });
+  card.appendChild(h);
+  if(open){
+    const list = document.createElement('div'); list.className = 'eps';
+    for(const e of eps){
+      const st = statusOf(e);
+      const b = document.createElement('button'); b.className = 'ep' + (st.cls === 'now' ? ' now' : '') + (e.missing ? ' miss' : '');
+      b.innerHTML = `<span class="id"></span><span class="ttl"></span><span class="tag"></span><span class="st"></span>`;
+      b.querySelector('.id').textContent = e.code || '';
+      b.querySelector('.ttl').textContent = e.name || e.code || e.id;
+      const tag = b.querySelector('.tag'); if(e.tag && g.kind !== 'record') tag.textContent = e.tag; else tag.remove();
+      const s = b.querySelector('.st'); s.textContent = st.txt; if(st.cls) s.classList.add(st.cls);
+      b.disabled = !!e.missing;
+      b.addEventListener('click', () => { location.hash = '#/r/' + encodeURIComponent(e.id); });
+      list.appendChild(b);
+    }
+    card.appendChild(list);
+  }
+  return card;
 }
 $('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; toc.tab = b.dataset.tab; store.set('tr:tab', toc.tab); renderToc(); });
 $('search').addEventListener('input', e => { toc.q = e.target.value; renderToc(); });

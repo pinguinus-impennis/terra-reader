@@ -28,6 +28,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sys);outline-of
 .search{font:inherit;font-size:13.5px;color:var(--ink);background:var(--card);border:1px solid var(--winline);border-radius:10px;padding:10px 12px;width:100%}
 .search::placeholder{color:var(--mute)}
 .groups{display:flex;flex-direction:column;gap:12px}
+.lineHead{font-size:12px;letter-spacing:.16em;color:var(--sys);font-weight:700;margin:14px 2px 0}
+.seg.small{align-self:flex-start}
+.seg.small button{flex:none;padding:6px 12px;font-size:12px}
 .chap{background:var(--card);border:1px solid var(--winline);border-radius:14px;overflow:hidden}
 .chap .h{display:flex;align-items:baseline;gap:10px;padding:12px 14px;width:100%;text-align:left}
 .chap .h .code{font-family:var(--mono);font-size:11px;color:var(--name);min-width:3.6em}
