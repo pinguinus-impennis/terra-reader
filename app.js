@@ -3,6 +3,7 @@
 'use strict';
 
 /* ---------------- sources ---------------- */
+const VERSION = '202610051159';   // bumped by tools/bump.py before each deploy so phones do not keep stale files
 const SRC = {
   text: 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/story/',
   alt: { kx: 'https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData_YoStar/main/ja_JP/gamedata/story/' },   // archived mirror, for the few collab events the main one lacks
@@ -31,13 +32,13 @@ const progress = {
 let INDEX = null, SPRITES = {}, BGM = {}, FACES = {}, METRICS = {}, EXTRA = {}, BASEMAP = {}, LINES = [];
 async function loadData(){
   const [i, s, b, f, m, x, sl] = await Promise.all([
-    fetch('data/index.json').then(r => r.json()),
-    fetch('data/sprites.json').then(r => r.json()).catch(() => ({})),
-    fetch('data/bgm.json').then(r => r.json()).catch(() => ({})),
-    fetch('data/faces.json').then(r => r.json()).catch(() => ({})),
-    fetch('data/metrics.json').then(r => r.json()).catch(() => ({})),
-    fetch('data/sprites_extra.json').then(r => r.json()).catch(() => ({})),
-    fetch('data/storylines.json').then(r => r.json()).catch(() => ({ lines: [] })),
+    fetch('data/index.json?v=' + VERSION).then(r => r.json()),
+    fetch('data/sprites.json?v=' + VERSION).then(r => r.json()).catch(() => ({})),
+    fetch('data/bgm.json?v=' + VERSION).then(r => r.json()).catch(() => ({})),
+    fetch('data/faces.json?v=' + VERSION).then(r => r.json()).catch(() => ({})),
+    fetch('data/metrics.json?v=' + VERSION).then(r => r.json()).catch(() => ({})),
+    fetch('data/sprites_extra.json?v=' + VERSION).then(r => r.json()).catch(() => ({})),
+    fetch('data/storylines.json?v=' + VERSION).then(r => r.json()).catch(() => ({ lines: [] })),
   ]);
   LINES = (sl && sl.lines) || [];
   INDEX = i; SPRITES = s; BGM = b; FACES = f; EXTRA = x;
