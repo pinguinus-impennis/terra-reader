@@ -177,6 +177,7 @@ addEventListener('hashchange', route);
    TOC
    ===================================================================== */
 const toc = { tab: store.get('tr:tab', 'main'), open: new Set(store.get('tr:open', [])), q: '', evOrder: store.get('tr:evOrder', 'release') };
+if(toc.evOrder !== 'line') toc.evOrder = 'release';   // the former 'official' (type) view was dropped
 function showToc(openId){
   player.stop(); music.stop();
   document.body.classList.remove('playing');
@@ -199,12 +200,10 @@ function renderToc(){
   const wrap = $('groups'); wrap.innerHTML = '';
   let shown = 0;
   const byLine = toc.tab === 'event' && toc.evOrder === 'line';
-  const byCls = toc.tab === 'event' && toc.evOrder === 'official';
-  const CLS_NAME = { intermezzo: 'インターミッツォ', side: 'サイドストーリー', mini: 'ミニストーリー' };
-  // event tab: release order, or grouped by storyline
+  // event tab: release order (sectioned by year), or grouped by storyline
   if(toc.tab === 'event'){
     const sw = document.createElement('div'); sw.className = 'seg small';
-    sw.innerHTML = '<button data-o="release">リリース順</button><button data-o="line">ストーリー</button><button data-o="official">種別</button>';
+    sw.innerHTML = '<button data-o="release">リリース順</button><button data-o="line">ストーリー</button>';
     sw.querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.o === toc.evOrder); b.addEventListener('click', () => { toc.evOrder = b.dataset.o; store.set('tr:evOrder', toc.evOrder); renderToc(); }); });
     wrap.appendChild(sw);
   }
@@ -212,8 +211,8 @@ function renderToc(){
   const sections = byLine
     ? [...LINES.map(l => ({ name: l.name, groups: l.groups.map(id => groups.find(g => g.id === id)).filter(Boolean) })),
        { name: '未分類', groups: groups.filter(g => !LINES.some(l => l.groups.includes(g.id))) }].filter(s => s.groups.length)
-    : byCls
-    ? ['intermezzo', 'side', 'mini'].map(c => ({ name: CLS_NAME[c], groups: groups.filter(g => (g.cls || (g.kind === 'mini' ? 'mini' : 'side')) === c) })).filter(s => s.groups.length)
+    : toc.tab === 'event'
+    ? [...new Set(groups.map(yearOf))].map(y => ({ name: y + '年', groups: groups.filter(g => yearOf(g) === y).sort((a, b) => a.start - b.start) }))
     : [{ name: null, groups }];
   for(const sec of sections){
     const cards = [];
@@ -229,6 +228,8 @@ function renderToc(){
   }
   if(!shown){ const d = document.createElement('div'); d.className = 'empty'; d.textContent = '該当なし'; wrap.appendChild(d); }
 }
+// release year in Japan time (group start is a unix timestamp)
+function yearOf(g){ return new Date((g.start + 9 * 3600) * 1000).getUTCFullYear(); }
 function groupCard(g, eps, open){
   const card = document.createElement('section'); card.className = 'chap'; card.dataset.g = g.id;
   const done = g.eps.filter(e => progress.get(e.id)?.done).length;
