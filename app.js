@@ -198,10 +198,12 @@ function renderToc(){
   const wrap = $('groups'); wrap.innerHTML = '';
   let shown = 0;
   const byLine = toc.tab === 'event' && toc.evOrder === 'line';
+  const byCls = toc.tab === 'event' && toc.evOrder === 'official';
+  const CLS_NAME = { intermezzo: 'インターミッツォ', side: 'サイドストーリー', mini: 'ミニストーリー' };
   // event tab: release order, or grouped by storyline
   if(toc.tab === 'event'){
     const sw = document.createElement('div'); sw.className = 'seg small';
-    sw.innerHTML = '<button data-o="release">リリース順</button><button data-o="line">ストーリー別</button>';
+    sw.innerHTML = '<button data-o="release">リリース順</button><button data-o="official">公式分類</button><button data-o="line">地域別</button>';
     sw.querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.o === toc.evOrder); b.addEventListener('click', () => { toc.evOrder = b.dataset.o; store.set('tr:evOrder', toc.evOrder); renderToc(); }); });
     wrap.appendChild(sw);
   }
@@ -209,6 +211,8 @@ function renderToc(){
   const sections = byLine
     ? [...LINES.map(l => ({ name: l.name, groups: l.groups.map(id => groups.find(g => g.id === id)).filter(Boolean) })),
        { name: '未分類', groups: groups.filter(g => !LINES.some(l => l.groups.includes(g.id))) }].filter(s => s.groups.length)
+    : byCls
+    ? ['intermezzo', 'side', 'mini'].map(c => ({ name: CLS_NAME[c], groups: groups.filter(g => (g.cls || (g.kind === 'mini' ? 'mini' : 'side')) === c) })).filter(s => s.groups.length)
     : [{ name: null, groups }];
   for(const sec of sections){
     const cards = [];

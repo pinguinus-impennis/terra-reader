@@ -42,6 +42,20 @@ def main():
         if kind == 'main':
             n = int(v['id'].split('_')[1]); g['code'] = f'EP{n:02d}'; g['n'] = n
         groups.append(g)
+    # official archive classification: intermezzo / side story / mini story
+    sh(f'curl -sL -o activity_table.json {RAW}excel/activity_table.json', work)
+    sh(f'curl -sL -o retro_table.json {RAW}excel/retro_table.json', work)
+    binfo = json.load(open(os.path.join(work, 'activity_table.json'), encoding='utf-8'))['basicInfo']
+    retro = {}
+    for v in json.load(open(os.path.join(work, 'retro_table.json'), encoding='utf-8'))['retroActList'].values():
+        ids = v.get('linkedActId') or []
+        for i in (ids if isinstance(ids, list) else [ids]): retro[i] = v['type']
+    CLS = {'BRANCHLINE': 'intermezzo', 'SIDESTORY': 'side', 'MINISTORY': 'mini'}
+    for g in groups:
+        if g['kind'] in ('event', 'mini'):
+            t = retro.get(g['id']) or binfo.get(g['id'], {}).get('displayType')
+            if t not in CLS and g['kind'] == 'mini': t = 'MINISTORY'
+            g['cls'] = CLS.get(t, 'side')
     order = {'main': 0, 'event': 1, 'mini': 2, 'record': 3}
     groups.sort(key=lambda g: (order[g['kind']], g.get('n', 0), g['start'], g['name']))
     for g in groups: g.pop('n', None)
