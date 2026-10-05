@@ -7,9 +7,10 @@ Requires network (curl/git). Downloads:
   - jp story txt files (sparse clone, to scan referenced sprite names)
   - ArknightsAssets2 cn tree listing (blob-less clone)
 """
-import json, os, re, subprocess, sys, tempfile, glob, collections, datetime
+import json, os, re, subprocess, sys, tempfile, glob, collections, datetime, urllib.request
 
 RAW = 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/'
+ALT = 'https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData_YoStar/main/ja_JP/gamedata/story/'   # archived, used only for files the mirror lacks
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'data')
 
@@ -28,11 +29,24 @@ def main():
     story_dir = os.path.join(work, 'akdata', 'jp', 'gamedata', 'story')
 
     # ---- index.json
+    # The current jp mirror lacks a few collab events (e.g. act24side). Kengxxiao's archived YoStar
+    # dump still has their jp text; fetch those into the tree so the sprite scan sees them, and mark
+    # the episode with alt='kx' so the app loads it from there.
+    def fetch_alt(txt):
+        dst = os.path.join(story_dir, txt + '.txt')
+        try:
+            with urllib.request.urlopen(urllib.request.Request(ALT + txt + '.txt', headers={'User-Agent': 'terra-reader build'}), timeout=60) as r:
+                data = r.read()
+        except Exception:
+            return False
+        os.makedirs(os.path.dirname(dst), exist_ok=True); open(dst, 'wb').write(data); return True
     d = json.load(open(os.path.join(work, 'story_review_table.json'), encoding='utf-8'))
     def ep(i):
         e = {'id': i['storyId'], 'code': i.get('storyCode') or '', 'name': i.get('storyName') or '', 'tag': i.get('avgTag') or '', 'txt': i['storyTxt']}
         if i.get('storyInfo'): e['info'] = i['storyInfo']
-        if not os.path.exists(os.path.join(story_dir, i['storyTxt'] + '.txt')): e['missing'] = True
+        if not os.path.exists(os.path.join(story_dir, i['storyTxt'] + '.txt')):
+            if fetch_alt(i['storyTxt']): e['alt'] = 'kx'       # served from the archived mirror instead
+            else: e['missing'] = True
         return e
     groups = []
     for v in d.values():
@@ -80,6 +94,7 @@ def main():
         if m: out += [f'characters/{m.group(1)}_{m.group(2)}/{m.group(1)}_{m.group(3)}.png', f'characters/{m.group(1)}_{m.group(3)}.png']
         m = re.match(r'^(.*)#0*(\d+)(\$\d+)?$', n)
         if m: out += [f'characters/{m.group(1)}/{m.group(1)}_{m.group(2)}.png', f'characters/{m.group(1)}_{m.group(2)}.png', f'characters/{m.group(1)}/{m.group(1)}#{m.group(2)}$1.png']
+        if m: out.append(f"characters/{m.group(1)}{m.group(3) or '$1'}.png")                 # body-only characters: X#n$m -> X$m.png (avg_npc_764_1)
         if '#' not in n:
             ms = re.match(r'^(.*)_(\d+)$', n)                  # bare legacy set name X_s means expression 1 of set s
             if ms: out.insert(0, f'characters/{n}/{ms.group(1)}_1.png')

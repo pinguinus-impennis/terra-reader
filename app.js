@@ -5,6 +5,7 @@
 /* ---------------- sources ---------------- */
 const SRC = {
   text: 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/story/',
+  alt: { kx: 'https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData_YoStar/main/ja_JP/gamedata/story/' },   // archived mirror, for the few collab events the main one lacks
   img:  'raw.githubusercontent.com/ArknightsAssets/ArknightsAssets2/cn/assets/dyn/avg/',
   proxy: 'https://wsrv.nl/?url=',
 };
@@ -556,7 +557,7 @@ async function openStory(id){
   el.code.textContent = (ep.code ? ep.code + ' ' : '') + (ep.name || '');
   resetView(); layout(); el.loading.hidden = false;
   try{
-    const url = SRC.text + ep.txt.split('/').map(encodeURIComponent).join('/') + '.txt';
+    const url = (SRC.alt[ep.alt] || SRC.text) + ep.txt.split('/').map(encodeURIComponent).join('/') + '.txt';
     const r = await fetch(url); if(!r.ok) throw new Error('HTTP ' + r.status);
     const src = await r.text();
     if(token !== player.token) return;
