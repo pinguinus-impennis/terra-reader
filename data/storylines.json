@@ -1,16 +1,58 @@
 {
- "note": "イベントをストーリーライン別に並べる表。groups は index.json の group id。未記載は『未分類』に入る",
+ "note": "ゲーム内ストーリー集（改修版）のストーリーライン。出典: arknights.wikiru.jp stagenav楽譜対応版。groups は index.json の group id。未記載は『未分類』",
  "lines": [
   {
-   "name": "ロドス・カズデル",
+   "name": "RI 方舟",
    "groups": [
     "act9d0",
     "act18d0",
-    "act33side"
+    "act8mini",
+    "act33side",
+    "act37side",
+    "act18mini"
    ]
   },
   {
-   "name": "炎国",
+   "name": "UR 燎原",
+   "groups": [
+    "act10d5"
+   ]
+  },
+  {
+   "name": "La 祝福されしもの",
+   "groups": [
+    "act16side",
+    "act26side",
+    "act42side"
+   ]
+  },
+  {
+   "name": "Kj 雪山と銀鉄",
+   "groups": [
+    "act14side",
+    "act30side",
+    "act46side"
+   ]
+  },
+  {
+   "name": "Si 七丘の新芽",
+   "groups": [
+    "act21side",
+    "act38side",
+    "act20mini"
+   ]
+  },
+  {
+   "name": "Ka 虹のふもと",
+   "groups": [
+    "act13d5",
+    "act9mini",
+    "act13side",
+    "act12mini"
+   ]
+  },
+  {
+   "name": "Su 歳歳成就",
    "groups": [
     "act6d5",
     "act16d5",
@@ -19,31 +61,31 @@
     "act14mini",
     "act31side",
     "act40side",
+    "act19mini",
     "act49side"
    ]
   },
   {
-   "name": "クルビア・ライン生命",
+   "name": "Rh 未来を摘み取る者",
    "groups": [
     "act15d0",
-    "act17d0",
     "act19side",
-    "act20side",
     "act25side",
-    "act32side"
+    "act47side"
    ]
   },
   {
-   "name": "イベリア・エーギル",
+   "name": "Æ 海淵より覗く",
    "groups": [
+    "1stact",
     "act18d3",
     "act17side",
-    "act26side",
-    "act34side"
+    "act34side",
+    "act39side"
    ]
   },
   {
-   "name": "リターニア",
+   "name": "Le 高塔の影",
    "groups": [
     "act11d0",
     "act18side",
@@ -51,81 +93,52 @@
    ]
   },
   {
-   "name": "カジミエーシュ",
+   "name": "Ta 灯火をもう一度",
    "groups": [
-    "1stact",
-    "act13d5",
-    "act13side"
+    "act22side",
+    "act41side"
    ]
   },
   {
-   "name": "龍門",
-   "groups": [
-    "act5d0"
-   ]
-  },
-  {
-   "name": "ウルサス",
-   "groups": [
-    "act10d5",
-    "act47side"
-   ]
-  },
-  {
-   "name": "イェラグ",
-   "groups": [
-    "act14side",
-    "act30side"
-   ]
-  },
-  {
-   "name": "ラテラーノ",
-   "groups": [
-    "act16side"
-   ]
-  },
-  {
-   "name": "サルゴン",
-   "groups": [
-    "act12d0",
-    "act9mini"
-   ]
-  },
-  {
-   "name": "シエスタ・リゾート",
+   "name": "St 情熱のリズム",
    "groups": [
     "act3d0",
-    "act27side"
+    "act12d0",
+    "act12side",
+    "act20side",
+    "act27side",
+    "act35side",
+    "act44side"
    ]
   },
   {
-   "name": "ボリバル",
+   "name": "Ts テラ奇譚",
    "groups": [
-    "act12side"
+    "act5d0",
+    "act28side",
+    "act43side",
+    "act48side",
+    "act4d0",
+    "act7d5",
+    "act13d0",
+    "act15d5",
+    "act7mini",
+    "act10mini",
+    "act11mini",
+    "act15mini",
+    "act16mini",
+    "act17mini"
    ]
   },
   {
-   "name": "シラクーザ",
+   "name": "コラボイベント",
    "groups": [
-    "act21side"
-   ]
-  },
-  {
-   "name": "ミノス",
-   "groups": [
-    "act48side"
-   ]
-  },
-  {
-   "name": "コラボ",
-   "groups": [
-    "act24side"
-   ]
-  },
-  {
-   "name": "単発",
-   "groups": [
-    "act36side"
+    "act17d0",
+    "act13mini",
+    "act24side",
+    "act32side",
+    "act36side",
+    "act45side"
    ]
   }
  ]
