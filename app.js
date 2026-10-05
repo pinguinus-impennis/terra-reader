@@ -3,7 +3,7 @@
 'use strict';
 
 /* ---------------- sources ---------------- */
-const VERSION = '202610051159';   // bumped by tools/bump.py before each deploy so phones do not keep stale files
+const VERSION = '202610051203';   // bumped by tools/bump.py before each deploy so phones do not keep stale files
 const SRC = {
   text: 'https://raw.githubusercontent.com/ArknightsAssets/ArknightsGamedata/master/jp/gamedata/story/',
   alt: { kx: 'https://raw.githubusercontent.com/Kengxxiao/ArknightsGameData_YoStar/main/ja_JP/gamedata/story/' },   // archived mirror, for the few collab events the main one lacks
@@ -177,8 +177,8 @@ addEventListener('hashchange', route);
 /* =====================================================================
    TOC
    ===================================================================== */
-const toc = { tab: store.get('tr:tab', 'main'), open: new Set(store.get('tr:open', [])), q: '', evOrder: store.get('tr:evOrder', 'release') };
-if(toc.evOrder !== 'line') toc.evOrder = 'release';   // the former 'official' (type) view was dropped
+const toc = { tab: store.get('tr:tab', 'main'), open: new Set(store.get('tr:open', [])), q: '', evOrder: store.get('tr:evOrder', 'line') };
+if(toc.evOrder !== 'release') toc.evOrder = 'line';   // default: storyline view; the former 'official' (type) view was dropped
 function showToc(openId){
   player.stop(); music.stop();
   document.body.classList.remove('playing');
@@ -204,7 +204,7 @@ function renderToc(){
   // event tab: release order (sectioned by year), or grouped by storyline
   if(toc.tab === 'event'){
     const sw = document.createElement('div'); sw.className = 'seg small';
-    sw.innerHTML = '<button data-o="release">リリース順</button><button data-o="line">ストーリー</button>';
+    sw.innerHTML = '<button data-o="line">ストーリーライン</button><button data-o="release">リリース日順</button>';
     sw.querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.o === toc.evOrder); b.addEventListener('click', () => { toc.evOrder = b.dataset.o; store.set('tr:evOrder', toc.evOrder); renderToc(); }); });
     wrap.appendChild(sw);
   }
